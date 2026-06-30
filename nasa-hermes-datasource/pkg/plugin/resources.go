@@ -96,24 +96,85 @@ func (d *Datasource) handleGetKeys(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, items)
 }
 
-// TODO: implement - query eventDefs for distinct components
 func (d *Datasource) handleGetEventComponents(w http.ResponseWriter, r *http.Request) {
-	writeJSONResponse(w, []string{})
+	rows, err := d.db.QueryContext(r.Context(), "SELECT DISTINCT component FROM eventDefs ORDER BY component;")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var items []string
+	for rows.Next() {
+		var item string
+		if err := rows.Scan(&item); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		items = append(items, item)
+	}
+	writeJSONResponse(w, items)
 }
 
-// TODO: implement - query eventDefs for names filtered by ?component=
 func (d *Datasource) handleGetEventNames(w http.ResponseWriter, r *http.Request) {
-	writeJSONResponse(w, []string{})
+	component := r.URL.Query().Get("component")
+	rows, err := d.db.QueryContext(r.Context(), "SELECT name FROM eventDefs WHERE component = $1 ORDER BY name;", component)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var items []string
+	for rows.Next() {
+		var item string
+		if err := rows.Scan(&item); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		items = append(items, item)
+	}
+	writeJSONResponse(w, items)
 }
 
-// TODO: implement - query events for distinct sources
 func (d *Datasource) handleGetEventSources(w http.ResponseWriter, r *http.Request) {
-	writeJSONResponse(w, []string{})
+	rows, err := d.db.QueryContext(r.Context(), "SELECT DISTINCT source FROM events WHERE time >= NOW() - INTERVAL '24 hours' LIMIT 100;")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	items := []string{}
+	for rows.Next() {
+		var item string
+		if err := rows.Scan(&item); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		items = append(items, item)
+	}
+	writeJSONResponse(w, items)
 }
 
-// TODO: implement - query eventDefs for distinct severities
 func (d *Datasource) handleGetEventSeverities(w http.ResponseWriter, r *http.Request) {
-	writeJSONResponse(w, []string{})
+	rows, err := d.db.QueryContext(r.Context(), "SELECT DISTINCT severity FROM eventDefs ORDER BY severity;")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var items []int64
+	for rows.Next() {
+		var item int64
+		if err := rows.Scan(&item); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		items = append(items, item)
+	}
+	writeJSONResponse(w, items)
 }
 
 func writeJSONResponse(w http.ResponseWriter, data interface{}) {
