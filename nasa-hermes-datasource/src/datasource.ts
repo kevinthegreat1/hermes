@@ -20,7 +20,6 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       channel: query.channel ? templateSrv.replace(query.channel, scopedVars) : undefined,
       source: query.source ? templateSrv.replace(query.source, scopedVars) : undefined,
       key: query.key ? templateSrv.replace(query.key, scopedVars) : undefined,
-      valueType: query.valueType,
     };
   }
 

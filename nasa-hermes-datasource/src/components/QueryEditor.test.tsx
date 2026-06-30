@@ -42,14 +42,13 @@ function buildProps(
 }
 
 describe('QueryEditor', () => {
-  it('renders all five dropdowns', async () => {
+  it('renders all four dropdowns', async () => {
     render(<QueryEditor {...buildProps()} />);
 
     expect(screen.getByRole('combobox', { name: /Component/ })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /Channel/ })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /Source/ })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /Key/ })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /Value type/ })).toBeInTheDocument();
   });
 
   it('loads component options on mount', async () => {
@@ -141,7 +140,6 @@ describe('QueryEditor', () => {
             channel: 'Temperature',
             source: 'fsw-1',
             key: 'value.x',
-            valueType: 'int',
           } as MyQuery,
         })}
       />
@@ -151,7 +149,6 @@ describe('QueryEditor', () => {
     expect(screen.getByDisplayValue('Temperature')).toBeInTheDocument();
     expect(screen.getByDisplayValue('fsw-1')).toBeInTheDocument();
     expect(screen.getByDisplayValue('value.x')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Int')).toBeInTheDocument();
   });
 
   it('handles resource fetch errors gracefully', async () => {
