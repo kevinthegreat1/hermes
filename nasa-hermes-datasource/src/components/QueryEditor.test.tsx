@@ -42,13 +42,50 @@ function buildProps(
 }
 
 describe('QueryEditor', () => {
-  it('renders all four dropdowns', async () => {
+  it('renders core dropdowns', async () => {
     render(<QueryEditor {...buildProps()} />);
 
     expect(screen.getByRole('combobox', { name: /Component/ })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /Channel/ })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /Source/ })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /Key/ })).toBeInTheDocument();
+  });
+
+  it('shows Key dropdown for compound channels', async () => {
+    const ds = mockDatasource({
+      getKeys: jest.fn().mockResolvedValue(['value', 'value.x', 'value.y']),
+    });
+    render(
+      <QueryEditor
+        {...buildProps({
+          datasource: ds,
+          query: { refId: 'A', component: 'CDH', channel: 'Attitude' } as MyQuery,
+        })}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /Key/ })).toBeInTheDocument();
+    });
+  });
+
+  it('hides Key dropdown for scalar channels', async () => {
+    const ds = mockDatasource({
+      getKeys: jest.fn().mockResolvedValue(['value']),
+    });
+    render(
+      <QueryEditor
+        {...buildProps({
+          datasource: ds,
+          query: { refId: 'A', component: 'CDH', channel: 'Temperature' } as MyQuery,
+        })}
+      />
+    );
+
+    await waitFor(() => {
+      expect(ds.getKeys).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByRole('combobox', { name: /Key/ })).not.toBeInTheDocument();
   });
 
   it('loads component options on mount', async () => {
@@ -130,14 +167,18 @@ describe('QueryEditor', () => {
     expect(ds.getKeys).not.toHaveBeenCalled();
   });
 
-  it('displays existing query values', () => {
+  it('displays existing query values', async () => {
+    const ds = mockDatasource({
+      getKeys: jest.fn().mockResolvedValue(['value', 'value.x', 'value.y']),
+    });
     render(
       <QueryEditor
         {...buildProps({
+          datasource: ds,
           query: {
             refId: 'A',
             component: 'CDH',
-            channel: 'Temperature',
+            channel: 'Attitude',
             source: 'fsw-1',
             key: 'value.x',
           } as MyQuery,
@@ -146,9 +187,12 @@ describe('QueryEditor', () => {
     );
 
     expect(screen.getByDisplayValue('CDH')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Temperature')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Attitude')).toBeInTheDocument();
     expect(screen.getByDisplayValue('fsw-1')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('value.x')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('value.x')).toBeInTheDocument();
+    });
   });
 
   it('handles resource fetch errors gracefully', async () => {

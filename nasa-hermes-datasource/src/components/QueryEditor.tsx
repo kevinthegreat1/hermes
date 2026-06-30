@@ -150,19 +150,20 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
             width={28}
           />
         </InlineField>
-        <InlineField label="Key" labelWidth={16} tooltip="Value field path (optional, defaults to value)">
-          <Combobox
-            id="query-editor-key"
-            options={keyOptions}
-            value={query.key ?? null}
-            onChange={onKeyChange}
-            isClearable
-            loading={keyLoading}
-            disabled={!query.component || !query.channel}
-            placeholder="Default (value)"
-            width={28}
-          />
-        </InlineField>
+        {keyOptions.length > 1 && (
+          <InlineField label="Key" labelWidth={16} tooltip="Value field path for compound channels">
+            <Combobox
+              id="query-editor-key"
+              options={keyOptions}
+              value={query.key ?? null}
+              onChange={onKeyChange}
+              isClearable
+              loading={keyLoading}
+              placeholder="All keys"
+              width={28}
+            />
+          </InlineField>
+        )}
       </Stack>
     </Stack>
   );
