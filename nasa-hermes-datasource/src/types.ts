@@ -1,14 +1,19 @@
 import { DataSourceJsonData } from '@grafana/data';
 import { DataQuery } from '@grafana/schema';
 
+export type QueryType = 'telemetry' | 'events';
+
 export interface MyQuery extends DataQuery {
+  queryType?: QueryType;
   component?: string;
   channel?: string;
   source?: string;
   key?: string;
+  eventName?: string;
+  severity?: string[];
 }
 
-export const DEFAULT_QUERY: Partial<MyQuery> = {};
+export const DEFAULT_QUERY: Partial<MyQuery> = { queryType: 'telemetry' };
 
 export interface DataPoint {
   Time: number;
