@@ -259,6 +259,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
             </InlineField>
             <InlineField label="Channel" labelWidth={16} tooltip="Telemetry channel name" required>
               <Combobox
+                key={`channel-${query.component ?? ''}`}
                 id="query-editor-channel"
                 options={channelOptions}
                 value={query.channel ?? null}
@@ -317,6 +318,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
             </InlineField>
             <InlineField label="Event name" labelWidth={16} tooltip="Event name" required>
               <Combobox
+                key={`event-name-${query.component ?? ''}`}
                 id="query-editor-event-name"
                 options={eventNameOptions}
                 value={query.eventName ?? null}
