@@ -56,10 +56,10 @@ func NewDatasource(_ context.Context, settings backend.DataSourceInstanceSetting
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/telemetry/components", ds.handleGetComponents)
-	mux.HandleFunc("/telemetry/channels", ds.handleGetChannels)
-	mux.HandleFunc("/telemetry/sources", ds.handleGetSources)
-	mux.HandleFunc("/telemetry/keys", ds.handleGetKeys)
+	mux.HandleFunc("/telemetry/components", ds.handleGetTelemetryComponents)
+	mux.HandleFunc("/telemetry/channels", ds.handleGetTelemetryChannels)
+	mux.HandleFunc("/telemetry/sources", ds.handleGetTelemetrySources)
+	mux.HandleFunc("/telemetry/keys", ds.handleGetTelemetryKeys)
 	mux.HandleFunc("/events/components", ds.handleGetEventComponents)
 	mux.HandleFunc("/events/names", ds.handleGetEventNames)
 	mux.HandleFunc("/events/sources", ds.handleGetEventSources)
