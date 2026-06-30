@@ -13,14 +13,33 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars) {
+    const templateSrv = getTemplateSrv();
     return {
       ...query,
-      queryText: getTemplateSrv().replace(query.queryText, scopedVars),
+      component: query.component ? templateSrv.replace(query.component, scopedVars) : undefined,
+      channel: query.channel ? templateSrv.replace(query.channel, scopedVars) : undefined,
+      source: query.source ? templateSrv.replace(query.source, scopedVars) : undefined,
+      key: query.key ? templateSrv.replace(query.key, scopedVars) : undefined,
     };
   }
 
   filterQuery(query: MyQuery): boolean {
-    // if no query has been provided, prevent the query from being executed
-    return !!query.queryText;
+    return !!query.component && !!query.channel;
+  }
+
+  async getComponents(): Promise<string[]> {
+    return this.getResource('components');
+  }
+
+  async getChannels(component: string): Promise<string[]> {
+    return this.getResource('channels', { component });
+  }
+
+  async getSources(): Promise<string[]> {
+    return this.getResource('sources');
+  }
+
+  async getKeys(component: string, channel: string): Promise<string[]> {
+    return this.getResource('keys', { component, channel });
   }
 }
