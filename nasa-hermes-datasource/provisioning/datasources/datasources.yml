@@ -9,6 +9,9 @@ datasources:
     version: 1
     editable: true
     jsonData:
-      path: '/resources'
+      host: 'timescaledb:5432'
+      user: 'postgres'
+      database: 'hermes'
+      ert: true
     secureJsonData:
-      apiKey: 'api-key'
+      password: 'password'

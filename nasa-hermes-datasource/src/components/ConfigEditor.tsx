@@ -1,5 +1,5 @@
 import React, { ChangeEvent } from 'react';
-import { InlineField, Input, SecretInput } from '@grafana/ui';
+import { Checkbox, InlineField, Input, SecretInput } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
 import { MyDataSourceOptions, MySecureJsonData } from '../types';
 
@@ -9,61 +9,94 @@ export function ConfigEditor(props: Props) {
   const { onOptionsChange, options } = props;
   const { jsonData, secureJsonFields, secureJsonData } = options;
 
-  const onPathChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const onHostChange = (event: ChangeEvent<HTMLInputElement>) => {
     onOptionsChange({
       ...options,
-      jsonData: {
-        ...jsonData,
-        path: event.target.value,
-      },
+      jsonData: { ...jsonData, host: event.target.value },
     });
   };
 
-  // Secure field (only sent to the backend)
-  const onAPIKeyChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const onUserChange = (event: ChangeEvent<HTMLInputElement>) => {
     onOptionsChange({
       ...options,
-      secureJsonData: {
-        apiKey: event.target.value,
-      },
+      jsonData: { ...jsonData, user: event.target.value },
     });
   };
 
-  const onResetAPIKey = () => {
+  const onDatabaseChange = (event: ChangeEvent<HTMLInputElement>) => {
     onOptionsChange({
       ...options,
-      secureJsonFields: {
-        ...options.secureJsonFields,
-        apiKey: false,
-      },
-      secureJsonData: {
-        ...options.secureJsonData,
-        apiKey: '',
-      },
+      jsonData: { ...jsonData, database: event.target.value },
+    });
+  };
+
+  const onErtChange = (event: ChangeEvent<HTMLInputElement>) => {
+    onOptionsChange({
+      ...options,
+      jsonData: { ...jsonData, ert: event.target.checked },
+    });
+  };
+
+  const onPasswordChange = (event: ChangeEvent<HTMLInputElement>) => {
+    onOptionsChange({
+      ...options,
+      secureJsonData: { password: event.target.value },
+    });
+  };
+
+  const onResetPassword = () => {
+    onOptionsChange({
+      ...options,
+      secureJsonFields: { ...options.secureJsonFields, password: false },
+      secureJsonData: { ...options.secureJsonData, password: '' },
     });
   };
 
   return (
     <>
-      <InlineField label="Path" labelWidth={14} interactive tooltip={'Json field returned to frontend'}>
+      <InlineField label="Host" labelWidth={14} tooltip="TimescaleDB host and port (e.g. localhost:5432)" required>
         <Input
-          id="config-editor-path"
-          onChange={onPathChange}
-          value={jsonData.path}
-          placeholder="Enter the path, e.g. /api/v1"
+          id="config-editor-host"
+          onChange={onHostChange}
+          value={jsonData.host ?? ''}
+          placeholder="localhost:5432"
           width={40}
         />
       </InlineField>
-      <InlineField label="API Key" labelWidth={14} interactive tooltip={'Secure json field (backend only)'}>
-        <SecretInput
-          required
-          id="config-editor-api-key"
-          isConfigured={secureJsonFields.apiKey}
-          value={secureJsonData?.apiKey}
-          placeholder="Enter your API key"
+      <InlineField label="User" labelWidth={14} tooltip="Database user. Leave blank to use the OS user.">
+        <Input
+          id="config-editor-user"
+          onChange={onUserChange}
+          value={jsonData.user ?? ''}
+          placeholder=""
           width={40}
-          onReset={onResetAPIKey}
-          onChange={onAPIKeyChange}
+        />
+      </InlineField>
+      <InlineField label="Password" labelWidth={14} tooltip="Database password. Leave blank if not required.">
+        <SecretInput
+          id="config-editor-password"
+          isConfigured={secureJsonFields.password}
+          value={secureJsonData?.password}
+          placeholder=""
+          width={40}
+          onReset={onResetPassword}
+          onChange={onPasswordChange}
+        />
+      </InlineField>
+      <InlineField label="Database" labelWidth={14} tooltip="Database name where telemetry and events will be stored." required>
+        <Input
+          id="config-editor-database"
+          onChange={onDatabaseChange}
+          value={jsonData.database ?? ''}
+          placeholder=""
+          width={40}
+        />
+      </InlineField>
+      <InlineField label="ERT" labelWidth={14} tooltip="Attach Earth-Return-Time as an additional field to every row">
+        <Checkbox
+          id="config-editor-ert"
+          onChange={onErtChange}
+          value={jsonData.ert ?? false}
         />
       </InlineField>
     </>

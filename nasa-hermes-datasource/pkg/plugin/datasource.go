@@ -103,9 +103,15 @@ func (d *Datasource) CheckHealth(_ context.Context, req *backend.CheckHealthRequ
 		return res, nil
 	}
 
-	if config.Secrets.ApiKey == "" {
+	if config.Host == "" {
 		res.Status = backend.HealthStatusError
-		res.Message = "API key is missing"
+		res.Message = "Host is missing"
+		return res, nil
+	}
+
+	if config.Database == "" {
+		res.Status = backend.HealthStatusError
+		res.Message = "Database is missing"
 		return res, nil
 	}
 
