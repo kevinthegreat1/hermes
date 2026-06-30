@@ -40,8 +40,6 @@ type queryModel struct {
 }
 
 func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
-	var response backend.DataResponse
-
 	// Unmarshal the JSON into our queryModel.
 	var qm queryModel
 
@@ -50,28 +48,79 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 		return backend.ErrDataResponse(backend.StatusBadRequest, fmt.Sprintf("json unmarshal: %v", err.Error()))
 	}
 
-	if qm.Component == "" || qm.Channel == "" {
-		return response
-	}
-
 	switch qm.QueryType {
 	case "events":
-		return d.queryEvents(ctx, pCtx, qm)
+		return d.queryEvents(ctx, pCtx, qm, query)
 	case "telemetry":
 		return d.queryTelemetry(ctx, pCtx, qm, query)
 	}
 	return backend.ErrDataResponse(backend.StatusBadRequest, fmt.Sprintf("invalid query type: %s", qm.QueryType))
 }
 
-func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, qm queryModel) backend.DataResponse {
+func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, qm queryModel, query backend.DataQuery) backend.DataResponse {
 	var response backend.DataResponse
-	// TODO: query events
 
+	queryArgs := []interface{}{
+		qm.Component,
+		qm.Channel,
+		qm.Source,
+		query.TimeRange.From,
+		query.TimeRange.To,
+	}
+
+	eventSQL := `
+		SELECT 
+			e.time,
+			d.severity,
+			e.message,
+			e.source,
+			e.args::text AS arguments
+		FROM eventDefs d
+		JOIN events e ON e.eventDefId = d.id
+		WHERE ($1 = '' OR d.component = $1)
+		  AND ($2 = '' OR d.name = $2)
+		  AND ($3 = '' OR e.source = $3)
+		  AND e.time >= $4
+		  AND e.time <= $5
+		ORDER BY e.time ASC;`
+
+	rows, err := d.db.QueryContext(ctx, eventSQL, queryArgs...)
+	if err != nil {
+		return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("events query execution failed: %v", err.Error()))
+	}
+	defer rows.Close()
+
+	frame := data.NewFrame("Events: " + qm.Channel)
+	frame.Fields = append(frame.Fields,
+		data.NewField("time", nil, []time.Time{}),
+		data.NewField("severity", nil, []int64{}),
+		data.NewField("message", nil, []string{}),
+		data.NewField("source", nil, []string{}),
+		data.NewField("args", nil, []string{}),
+	)
+
+	for rows.Next() {
+		var t time.Time
+		var severity int64
+		var message, source, args string
+
+		if err := rows.Scan(&t, &severity, &message, &source, &args); err != nil {
+			return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("events row scan failure: %v", err.Error()))
+		}
+
+		frame.AppendRow(t, severity, message, source, args)
+	}
+
+	response.Frames = append(response.Frames, frame)
 	return response
 }
 
 func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext, qm queryModel, query backend.DataQuery) backend.DataResponse {
 	var response backend.DataResponse
+	if qm.Component == "" || qm.Channel == "" {
+		return response
+	}
+
 	// Resolve telemetry def id
 	var valueType string
 	var defID int64
@@ -88,7 +137,7 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 		if err == sql.ErrNoRows {
 			return backend.ErrDataResponse(backend.StatusNotFound, fmt.Sprintf("telemetry channel '%s.%s' not found", qm.Component, qm.Channel))
 		}
-		return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("metadata registry failure: %v", err.Error()))
+		return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("telemetry metadata registry failure: %v", err.Error()))
 	}
 
 	// Resolve data column
@@ -97,7 +146,7 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 	// Execute the query
 	rows, err := d.db.QueryContext(ctx, rawSQL, queryArgs...)
 	if err != nil {
-		return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("timescaledb engine execution failed: %v", err.Error()))
+		return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("telemetry query execution failed: %v", err.Error()))
 	}
 	defer rows.Close()
 
@@ -159,7 +208,7 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 		var t time.Time
 		var v sql.NullFloat64
 		if err := rows.Scan(&t, &v); err != nil {
-			return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("row scan failure: %v", err.Error()))
+			return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("telemetry row scan failure: %v", err.Error()))
 		}
 
 		var valPtr *float64
