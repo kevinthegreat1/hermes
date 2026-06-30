@@ -265,7 +265,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
                 onChange={onChannelChange}
                 loading={channelLoading}
                 disabled={!query.component}
-                placeholder="Select channel"
+                placeholder={query.component ? 'Select channel' : 'Select a component first'}
                 width={28}
               />
             </InlineField>
@@ -323,7 +323,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
                 onChange={onEventNameChange}
                 loading={eventNameLoading}
                 disabled={!query.component}
-                placeholder="Select event"
+                placeholder={query.component ? 'Select event' : 'Select a component first'}
                 width={28}
               />
             </InlineField>
