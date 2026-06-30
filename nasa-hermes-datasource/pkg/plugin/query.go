@@ -54,9 +54,10 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 		return response
 	}
 
-	if qm.QueryType == "event" {
+	switch qm.QueryType {
+	case "events":
 		return d.queryEvents(ctx, pCtx, qm)
-	} else if qm.QueryType == "telemetry" {
+	case "telemetry":
 		return d.queryTelemetry(ctx, pCtx, qm, query)
 	}
 	return backend.ErrDataResponse(backend.StatusBadRequest, fmt.Sprintf("invalid query type: %s", qm.QueryType))
