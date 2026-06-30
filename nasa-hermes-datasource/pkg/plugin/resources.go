@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func (d *Datasource) handleGetComponents(w http.ResponseWriter, r *http.Request) {
+func (d *Datasource) handleGetTelemetryComponents(w http.ResponseWriter, r *http.Request) {
 	rows, err := d.db.QueryContext(r.Context(), "SELECT DISTINCT component FROM telemetryDefs ORDER BY component;")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -26,7 +26,7 @@ func (d *Datasource) handleGetComponents(w http.ResponseWriter, r *http.Request)
 	writeJSONResponse(w, items)
 }
 
-func (d *Datasource) handleGetChannels(w http.ResponseWriter, r *http.Request) {
+func (d *Datasource) handleGetTelemetryChannels(w http.ResponseWriter, r *http.Request) {
 	component := r.URL.Query().Get("component")
 	rows, err := d.db.QueryContext(r.Context(), "SELECT name FROM telemetryDefs WHERE component = $1 ORDER BY name;", component)
 	if err != nil {
@@ -47,7 +47,7 @@ func (d *Datasource) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, items)
 }
 
-func (d *Datasource) handleGetSources(w http.ResponseWriter, r *http.Request) {
+func (d *Datasource) handleGetTelemetrySources(w http.ResponseWriter, r *http.Request) {
 	rows, err := d.db.QueryContext(r.Context(), "SELECT DISTINCT source FROM telemetry WHERE time >= NOW() - INTERVAL '24 hours' LIMIT 100;")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -67,7 +67,7 @@ func (d *Datasource) handleGetSources(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, items)
 }
 
-func (d *Datasource) handleGetKeys(w http.ResponseWriter, r *http.Request) {
+func (d *Datasource) handleGetTelemetryKeys(w http.ResponseWriter, r *http.Request) {
 	component := r.URL.Query().Get("component")
 	channel := r.URL.Query().Get("channel")
 
