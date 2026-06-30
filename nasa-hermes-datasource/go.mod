@@ -2,7 +2,10 @@ module github.com/nasa/hermes-datasource
 
 go 1.26.3
 
-require github.com/grafana/grafana-plugin-sdk-go v0.292.1
+require (
+	github.com/grafana/grafana-plugin-sdk-go v0.292.1
+	github.com/lib/pq v1.12.3
+)
 
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect

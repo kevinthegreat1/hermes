@@ -54,7 +54,7 @@ export function ConfigEditor(props: Props) {
 
   return (
     <>
-      <InlineField label="Host" labelWidth={14} tooltip="TimescaleDB host and port (e.g. localhost:5432)" required>
+      <InlineField label="Host" labelWidth={14} tooltip="TimescaleDB host and port (e.g. localhost:5432, or timescaledb:5432 if using docker)" required>
         <Input
           id="config-editor-host"
           onChange={onHostChange}

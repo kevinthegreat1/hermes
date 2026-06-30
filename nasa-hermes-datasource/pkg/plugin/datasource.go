@@ -2,14 +2,19 @@ package plugin
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/nasa/hermes-datasource/pkg/models"
+
+	_ "github.com/lib/pq"
 )
 
 // Make sure Datasource implements required interfaces. This is important to do
@@ -24,13 +29,39 @@ var (
 )
 
 // NewDatasource creates a new datasource instance.
-func NewDatasource(_ context.Context, _ backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
-	return &Datasource{}, nil
+func NewDatasource(_ context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
+	config, err := models.LoadPluginSettings(settings)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to load settings")
+	}
+
+	host := config.Host
+	port := "5432"
+	if strings.Contains(host, ":") {
+		h, p, err := net.SplitHostPort(host)
+		if err == nil {
+			host, port = h, p
+		}
+	}
+
+	connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, config.User, config.Secrets.Password, config.Database)
+
+	db, err := sql.Open("postgres", connectionString)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to initialize postgres database driver: %w", err)
+	}
+
+	return &Datasource{
+		db: db,
+	}, nil
 }
 
 // Datasource is an example datasource which can respond to data queries, reports
 // its health and has streaming skills.
-type Datasource struct{}
+type Datasource struct {
+	db *sql.DB
+}
 
 // Dispose here tells plugin SDK that plugin wants to clean up resources when a new instance
 // created. As soon as datasource settings change detected by SDK old datasource instance will
@@ -93,30 +124,43 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 // The main use case for these health checks is the test button on the
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
-func (d *Datasource) CheckHealth(_ context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	res := &backend.CheckHealthResult{}
 	config, err := models.LoadPluginSettings(*req.PluginContext.DataSourceInstanceSettings)
 
+	// Check config
 	if err != nil {
 		res.Status = backend.HealthStatusError
 		res.Message = "Unable to load settings"
 		return res, nil
 	}
-
 	if config.Host == "" {
 		res.Status = backend.HealthStatusError
-		res.Message = "Host is missing"
+		res.Message = "Host configuration parameter is missing"
+		return res, nil
+	}
+	if config.Database == "" {
+		res.Status = backend.HealthStatusError
+		res.Message = "Database configuration parameter is missing"
 		return res, nil
 	}
 
-	if config.Database == "" {
+	// Check connectivity
+	if d.db == nil {
 		res.Status = backend.HealthStatusError
-		res.Message = "Database is missing"
+		res.Message = "Internal database connection is null"
+		return res, nil
+	}
+
+	err = d.db.PingContext(ctx)
+	if err != nil {
+		res.Status = backend.HealthStatusError
+		res.Message = fmt.Sprintf("TimescaleDB ping refused: %s", err.Error())
 		return res, nil
 	}
 
 	return &backend.CheckHealthResult{
 		Status:  backend.HealthStatusOk,
-		Message: "Data source is working",
+		Message: fmt.Sprintf("Successfully connected to database '%s' at '%s'", config.Database, config.Host),
 	}, nil
 }
