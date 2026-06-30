@@ -32,6 +32,7 @@ func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataReques
 }
 
 type queryModel struct {
+	QueryType string `json:"queryType"`
 	Component string `json:"component"`
 	Channel   string `json:"channel"`
 	Source    string `json:"source"`
@@ -53,6 +54,23 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 		return response
 	}
 
+	if qm.QueryType == "event" {
+		return d.queryEvents(ctx, pCtx, qm)
+	} else if qm.QueryType == "telemetry" {
+		return d.queryTelemetry(ctx, pCtx, qm, query)
+	}
+	return backend.ErrDataResponse(backend.StatusBadRequest, fmt.Sprintf("invalid query type: %s", qm.QueryType))
+}
+
+func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, qm queryModel) backend.DataResponse {
+	var response backend.DataResponse
+	// TODO: query events
+
+	return response
+}
+
+func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext, qm queryModel, query backend.DataQuery) backend.DataResponse {
+	var response backend.DataResponse
 	// Resolve telemetry def id
 	var valueType string
 	var defID int64
@@ -64,7 +82,7 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 		JOIN telemetry t ON t.telemetryDefId = d.id
 		WHERE d.component = $1 AND d.name = $2
 		LIMIT 1;`
-	err = d.db.QueryRowContext(ctx, defQuery, qm.Component, qm.Channel).Scan(&defID, &valueType)
+	err := d.db.QueryRowContext(ctx, defQuery, qm.Component, qm.Channel).Scan(&defID, &valueType)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return backend.ErrDataResponse(backend.StatusNotFound, fmt.Sprintf("telemetry channel '%s.%s' not found", qm.Component, qm.Channel))
