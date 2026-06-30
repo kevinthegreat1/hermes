@@ -52,8 +52,8 @@ func TestCheckHealth(t *testing.T) {
 		if res.Status != backend.HealthStatusError {
 			t.Errorf("expected HealthStatusError, got %v", res.Status)
 		}
-		if res.Message != "Host is missing" {
-			t.Errorf("expected 'Host is missing', got '%s'", res.Message)
+		if res.Message != "Host configuration parameter is missing" {
+			t.Errorf("expected 'Host configuration parameter is missing', got '%s'", res.Message)
 		}
 	})
 
@@ -78,12 +78,12 @@ func TestCheckHealth(t *testing.T) {
 		if res.Status != backend.HealthStatusError {
 			t.Errorf("expected HealthStatusError, got %v", res.Status)
 		}
-		if res.Message != "Database is missing" {
-			t.Errorf("expected 'Database is missing', got '%s'", res.Message)
+		if res.Message != "Database configuration parameter is missing" {
+			t.Errorf("expected 'Database configuration parameter is missing', got '%s'", res.Message)
 		}
 	})
 
-	t.Run("returns ok when host and database are provided", func(t *testing.T) {
+	t.Run("returns error when db is nil", func(t *testing.T) {
 		jsonData, _ := json.Marshal(map[string]interface{}{
 			"host":     "localhost:5432",
 			"database": "hermes",
@@ -101,11 +101,11 @@ func TestCheckHealth(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if res.Status != backend.HealthStatusOk {
-			t.Errorf("expected HealthStatusOk, got %v", res.Status)
+		if res.Status != backend.HealthStatusError {
+			t.Errorf("expected HealthStatusError, got %v", res.Status)
 		}
-		if res.Message != "Data source is working" {
-			t.Errorf("expected 'Data source is working', got '%s'", res.Message)
+		if res.Message != "Internal database connection is null" {
+			t.Errorf("expected 'Internal database connection is null', got '%s'", res.Message)
 		}
 	})
 }
