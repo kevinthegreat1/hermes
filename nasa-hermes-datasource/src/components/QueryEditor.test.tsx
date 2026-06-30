@@ -28,7 +28,11 @@ function mockDatasource(overrides?: Partial<DataSource>): DataSource {
     getEventComponents: jest.fn().mockResolvedValue(['CDH', 'Navigation']),
     getEventNames: jest.fn().mockResolvedValue(['SystemStartup', 'ModeChange']),
     getEventSources: jest.fn().mockResolvedValue(['fsw-1', 'fsw-2']),
-    getEventSeverities: jest.fn().mockResolvedValue(['DIAGNOSTIC', 'WARNING_LO', 'FATAL']),
+    getEventSeverities: jest.fn().mockResolvedValue([
+      { value: '0', label: 'DIAGNOSTIC' },
+      { value: '3', label: 'WARNING_LOW' },
+      { value: '6', label: 'FATAL' },
+    ]),
     ...overrides,
   } as unknown as DataSource;
 }
