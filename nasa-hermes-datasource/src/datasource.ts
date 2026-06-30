@@ -1,5 +1,6 @@
 import { DataSourceInstanceSettings, CoreApp, ScopedVars } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
+import type { ComboboxOption } from '@grafana/ui';
 
 import { MyQuery, MyDataSourceOptions, DEFAULT_QUERY } from './types';
 
@@ -61,7 +62,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return this.getResource('events/sources');
   }
 
-  async getEventSeverities(): Promise<string[]> {
+  async getEventSeverities(): Promise<Array<ComboboxOption<string>>> {
     return this.getResource('events/severities');
   }
 }

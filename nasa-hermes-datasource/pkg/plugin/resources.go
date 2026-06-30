@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -157,6 +158,21 @@ func (d *Datasource) handleGetEventSources(w http.ResponseWriter, r *http.Reques
 	writeJSONResponse(w, items)
 }
 
+var severityLabels = map[int64]string{
+	0: "DIAGNOSTIC",
+	1: "ACTIVITY_LOW",
+	2: "ACTIVITY_HIGH",
+	3: "WARNING_LOW",
+	4: "WARNING_HIGH",
+	5: "COMMAND",
+	6: "FATAL",
+}
+
+type severityOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
 func (d *Datasource) handleGetEventSeverities(w http.ResponseWriter, r *http.Request) {
 	rows, err := d.db.QueryContext(r.Context(), "SELECT DISTINCT severity FROM eventDefs ORDER BY severity;")
 	if err != nil {
@@ -165,14 +181,18 @@ func (d *Datasource) handleGetEventSeverities(w http.ResponseWriter, r *http.Req
 	}
 	defer rows.Close()
 
-	var items []int64
+	var items []severityOption
 	for rows.Next() {
-		var item int64
-		if err := rows.Scan(&item); err != nil {
+		var sev int64
+		if err := rows.Scan(&sev); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		items = append(items, item)
+		label, ok := severityLabels[sev]
+		if !ok {
+			label = fmt.Sprintf("UNKNOWN(%d)", sev)
+		}
+		items = append(items, severityOption{Value: fmt.Sprintf("%d", sev), Label: label})
 	}
 	writeJSONResponse(w, items)
 }

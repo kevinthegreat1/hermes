@@ -126,7 +126,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     setSeverityLoading(true);
     datasource
       .getEventSeverities()
-      .then((values) => setSeverityOptions(toOptions(values)))
+      .then((options) => setSeverityOptions(options))
       .catch(() => setSeverityOptions([]))
       .finally(() => setSeverityLoading(false));
   }, [datasource, queryType]);
