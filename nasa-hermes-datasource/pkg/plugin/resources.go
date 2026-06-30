@@ -96,6 +96,26 @@ func (d *Datasource) handleGetKeys(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, items)
 }
 
+// TODO: implement - query eventDefs for distinct components
+func (d *Datasource) handleGetEventComponents(w http.ResponseWriter, r *http.Request) {
+	writeJSONResponse(w, []string{})
+}
+
+// TODO: implement - query eventDefs for names filtered by ?component=
+func (d *Datasource) handleGetEventNames(w http.ResponseWriter, r *http.Request) {
+	writeJSONResponse(w, []string{})
+}
+
+// TODO: implement - query events for distinct sources
+func (d *Datasource) handleGetEventSources(w http.ResponseWriter, r *http.Request) {
+	writeJSONResponse(w, []string{})
+}
+
+// TODO: implement - query eventDefs for distinct severities
+func (d *Datasource) handleGetEventSeverities(w http.ResponseWriter, r *http.Request) {
+	writeJSONResponse(w, []string{})
+}
+
 func writeJSONResponse(w http.ResponseWriter, data interface{}) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
