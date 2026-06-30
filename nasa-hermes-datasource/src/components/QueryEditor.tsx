@@ -169,8 +169,9 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       } else {
         onChange({ ...query, component: option.value, channel: undefined, key: undefined });
       }
+      onRunQuery();
     },
-    [onChange, query, queryType]
+    [onChange, onRunQuery, query, queryType]
   );
 
   const onChannelChange = useCallback(
