@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Combobox, InlineField, MultiCombobox, RadioButtonGroup, Stack } from '@grafana/ui';
+import { Combobox, InlineField, RadioButtonGroup, Stack } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
 import type { ComboboxOption } from '@grafana/ui';
 import { DataSource } from '../datasource';
@@ -31,15 +31,8 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   const [keyLoading, setKeyLoading] = useState(false);
 
   // Event state
-  const [eventComponentOptions, setEventComponentOptions] = useState<Array<ComboboxOption<string>>>([]);
-  const [eventNameOptions, setEventNameOptions] = useState<Array<ComboboxOption<string>>>([]);
   const [eventSourceOptions, setEventSourceOptions] = useState<Array<ComboboxOption<string>>>([]);
-  const [severityOptions, setSeverityOptions] = useState<Array<ComboboxOption<string>>>([]);
-
-  const [eventComponentLoading, setEventComponentLoading] = useState(false);
-  const [eventNameLoading, setEventNameLoading] = useState(false);
   const [eventSourceLoading, setEventSourceLoading] = useState(false);
-  const [severityLoading, setSeverityLoading] = useState(false);
 
   // --- Telemetry data loading ---
 
@@ -99,18 +92,6 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     if (queryType !== 'events') {
       return;
     }
-    setEventComponentLoading(true);
-    datasource
-      .getEventComponents()
-      .then((values) => setEventComponentOptions(toOptions(values)))
-      .catch(() => setEventComponentOptions([]))
-      .finally(() => setEventComponentLoading(false));
-  }, [datasource, queryType]);
-
-  useEffect(() => {
-    if (queryType !== 'events') {
-      return;
-    }
     setEventSourceLoading(true);
     datasource
       .getEventSources()
@@ -119,59 +100,32 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       .finally(() => setEventSourceLoading(false));
   }, [datasource, queryType]);
 
-  useEffect(() => {
-    if (queryType !== 'events') {
-      return;
-    }
-    setSeverityLoading(true);
-    datasource
-      .getEventSeverities()
-      .then((options) => setSeverityOptions(options))
-      .catch(() => setSeverityOptions([]))
-      .finally(() => setSeverityLoading(false));
-  }, [datasource, queryType]);
-
-  useEffect(() => {
-    if (queryType !== 'events' || !query.component) {
-      setEventNameOptions([]);
-      return;
-    }
-    setEventNameLoading(true);
-    datasource
-      .getEventNames(query.component)
-      .then((values) => setEventNameOptions(toOptions(values)))
-      .catch(() => setEventNameOptions([]))
-      .finally(() => setEventNameLoading(false));
-  }, [datasource, queryType, query.component]);
-
   // --- Handlers ---
 
   const onQueryTypeChange = useCallback(
     (value: QueryType) => {
-      onChange({
+      const updated = {
         ...query,
         queryType: value,
         component: undefined,
         channel: undefined,
         key: undefined,
         source: undefined,
-        eventName: undefined,
-        severity: undefined,
-      });
+      };
+      onChange(updated);
+      if (value === 'events') {
+        onRunQuery();
+      }
     },
-    [onChange, query]
+    [onChange, onRunQuery, query]
   );
 
   const onComponentChange = useCallback(
     (option: ComboboxOption<string>) => {
-      if (queryType === 'events') {
-        onChange({ ...query, component: option.value, eventName: undefined });
-      } else {
-        onChange({ ...query, component: option.value, channel: undefined, key: undefined });
-      }
+      onChange({ ...query, component: option.value, channel: undefined, key: undefined });
       onRunQuery();
     },
-    [onChange, onRunQuery, query, queryType]
+    [onChange, onRunQuery, query]
   );
 
   const onChannelChange = useCallback(
@@ -192,7 +146,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       if (queryType === 'telemetry' && updated.component && updated.channel) {
         onRunQuery();
       }
-      if (queryType === 'events' && updated.component && updated.eventName) {
+      if (queryType === 'events') {
         onRunQuery();
       }
     },
@@ -204,28 +158,6 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       const updated = { ...query, key: option?.value ?? undefined };
       onChange(updated);
       if (updated.component && updated.channel) {
-        onRunQuery();
-      }
-    },
-    [onChange, onRunQuery, query]
-  );
-
-  const onEventNameChange = useCallback(
-    (option: ComboboxOption<string>) => {
-      const updated = { ...query, eventName: option.value };
-      onChange(updated);
-      if (updated.component && updated.eventName) {
-        onRunQuery();
-      }
-    },
-    [onChange, onRunQuery, query]
-  );
-
-  const onSeverityChange = useCallback(
-    (options: Array<ComboboxOption<string>>) => {
-      const updated = { ...query, severity: options.length > 0 ? options.map((o) => o.value) : undefined };
-      onChange(updated);
-      if (updated.component && updated.eventName) {
         onRunQuery();
       }
     },
@@ -304,60 +236,20 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       )}
 
       {queryType === 'events' && (
-        <>
-          <Stack gap={0}>
-            <InlineField label="Component" labelWidth={16} tooltip="FSW component or module" required>
-              <Combobox
-                id="query-editor-event-component"
-                options={eventComponentOptions}
-                value={query.component ?? null}
-                onChange={onComponentChange}
-                loading={eventComponentLoading}
-                placeholder="Select component"
-                width={28}
-              />
-            </InlineField>
-            <InlineField label="Event name" labelWidth={16} tooltip="Event name" required>
-              <Combobox
-                key={`event-name-${query.component ?? ''}`}
-                id="query-editor-event-name"
-                options={eventNameOptions}
-                value={query.eventName ?? null}
-                onChange={onEventNameChange}
-                loading={eventNameLoading}
-                disabled={!query.component}
-                placeholder={query.component ? 'Select event' : 'Select a component first'}
-                width={28}
-              />
-            </InlineField>
-          </Stack>
-          <Stack gap={0}>
-            <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
-              <Combobox
-                id="query-editor-event-source"
-                options={eventSourceOptions}
-                value={query.source ?? null}
-                onChange={onSourceChange}
-                isClearable
-                loading={eventSourceLoading}
-                placeholder="All sources"
-                width={28}
-              />
-            </InlineField>
-            <InlineField label="Severity" labelWidth={16} tooltip="Filter by event severity (optional)">
-              <MultiCombobox
-                id="query-editor-severity"
-                options={severityOptions}
-                value={query.severity ?? []}
-                onChange={onSeverityChange}
-                loading={severityLoading}
-                isClearable
-                placeholder="All severities"
-                width={28}
-              />
-            </InlineField>
-          </Stack>
-        </>
+        <Stack gap={0}>
+          <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
+            <Combobox
+              id="query-editor-event-source"
+              options={eventSourceOptions}
+              value={query.source ?? null}
+              onChange={onSourceChange}
+              isClearable
+              loading={eventSourceLoading}
+              placeholder="All sources"
+              width={28}
+            />
+          </InlineField>
+        </Stack>
       )}
     </Stack>
   );

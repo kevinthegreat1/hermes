@@ -9,8 +9,6 @@ export interface MyQuery extends DataQuery {
   channel?: string;
   source?: string;
   key?: string;
-  eventName?: string;
-  severity?: string[];
 }
 
 export const DEFAULT_QUERY: Partial<MyQuery> = { queryType: 'telemetry' };

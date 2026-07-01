@@ -57,12 +57,27 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 	return backend.ErrDataResponse(backend.StatusBadRequest, fmt.Sprintf("invalid query type: %s", qm.QueryType))
 }
 
+var severityLabels = map[int64]string{
+	0: "DIAGNOSTIC",
+	1: "ACTIVITY_LOW",
+	2: "ACTIVITY_HIGH",
+	3: "WARNING_LOW",
+	4: "WARNING_HIGH",
+	5: "COMMAND",
+	6: "FATAL",
+}
+
+func severityLabel(sev int64) string {
+	if label, ok := severityLabels[sev]; ok {
+		return label
+	}
+	return fmt.Sprintf("UNKNOWN(%d)", sev)
+}
+
 func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, qm queryModel, query backend.DataQuery) backend.DataResponse {
 	var response backend.DataResponse
 
 	queryArgs := []interface{}{
-		qm.Component,
-		qm.Channel,
 		qm.Source,
 		query.TimeRange.From,
 		query.TimeRange.To,
@@ -71,17 +86,17 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 	eventSQL := `
 		SELECT 
 			e.time,
+			d.component,
+			d.name,
 			d.severity,
 			e.message,
 			e.source,
 			e.args::text AS arguments
 		FROM eventDefs d
 		JOIN events e ON e.eventDefId = d.id
-		WHERE ($1 = '' OR d.component = $1)
-		  AND ($2 = '' OR d.name = $2)
-		  AND ($3 = '' OR e.source = $3)
-		  AND e.time >= $4
-		  AND e.time <= $5
+		WHERE ($1 = '' OR e.source = $1)
+		  AND e.time >= $2
+		  AND e.time <= $3
 		ORDER BY e.time ASC;`
 
 	rows, err := d.db.QueryContext(ctx, eventSQL, queryArgs...)
@@ -90,25 +105,34 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 	}
 	defer rows.Close()
 
-	frame := data.NewFrame("Events: " + qm.Channel)
+	frame := data.NewFrame("Events")
 	frame.Fields = append(frame.Fields,
 		data.NewField("time", nil, []time.Time{}),
-		data.NewField("severity", nil, []int64{}),
+		data.NewField("component", nil, []string{}),
+		data.NewField("name", nil, []string{}),
+		data.NewField("severity", nil, []string{}),
 		data.NewField("message", nil, []string{}),
-		data.NewField("source", nil, []string{}),
-		data.NewField("args", nil, []string{}),
 	)
+	if qm.Source == "" {
+		frame.Fields = append(frame.Fields, data.NewField("source", nil, []string{}))
+	}
+	frame.Fields = append(frame.Fields, data.NewField("args", nil, []string{}))
 
 	for rows.Next() {
 		var t time.Time
+		var component, name string
 		var severity int64
 		var message, source, args string
 
-		if err := rows.Scan(&t, &severity, &message, &source, &args); err != nil {
+		if err := rows.Scan(&t, &component, &name, &severity, &message, &source, &args); err != nil {
 			return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("events row scan failure: %v", err.Error()))
 		}
 
-		frame.AppendRow(t, severity, message, source, args)
+		if qm.Source == "" {
+			frame.AppendRow(t, component, name, severityLabel(severity), message, source, args)
+		} else {
+			frame.AppendRow(t, component, name, severityLabel(severity), message, args)
+		}
 	}
 
 	response.Frames = append(response.Frames, frame)

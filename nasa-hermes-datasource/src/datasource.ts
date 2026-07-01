@@ -1,7 +1,5 @@
 import { DataSourceInstanceSettings, CoreApp, ScopedVars } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
-import type { ComboboxOption } from '@grafana/ui';
-
 import { MyQuery, MyDataSourceOptions, DEFAULT_QUERY } from './types';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
@@ -21,13 +19,12 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       channel: query.channel ? templateSrv.replace(query.channel, scopedVars) : undefined,
       source: query.source ? templateSrv.replace(query.source, scopedVars) : undefined,
       key: query.key ? templateSrv.replace(query.key, scopedVars) : undefined,
-      eventName: query.eventName ? templateSrv.replace(query.eventName, scopedVars) : undefined,
     };
   }
 
   filterQuery(query: MyQuery): boolean {
     if (query.queryType === 'events') {
-      return !!query.component && !!query.eventName;
+      return true;
     }
     return !!query.component && !!query.channel;
   }
@@ -50,19 +47,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   // Event resources
-  async getEventComponents(): Promise<string[]> {
-    return this.getResource('events/components');
-  }
-
-  async getEventNames(component: string): Promise<string[]> {
-    return this.getResource('events/names', { component });
-  }
-
   async getEventSources(): Promise<string[]> {
     return this.getResource('events/sources');
-  }
-
-  async getEventSeverities(): Promise<Array<ComboboxOption<string>>> {
-    return this.getResource('events/severities');
   }
 }

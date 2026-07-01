@@ -25,14 +25,7 @@ function mockDatasource(overrides?: Partial<DataSource>): DataSource {
     getChannels: jest.fn().mockResolvedValue(['Temperature', 'Voltage']),
     getSources: jest.fn().mockResolvedValue(['fsw-1', 'fsw-2']),
     getKeys: jest.fn().mockResolvedValue(['value', 'value.x', 'value.y']),
-    getEventComponents: jest.fn().mockResolvedValue(['CDH', 'Navigation']),
-    getEventNames: jest.fn().mockResolvedValue(['SystemStartup', 'ModeChange']),
     getEventSources: jest.fn().mockResolvedValue(['fsw-1', 'fsw-2']),
-    getEventSeverities: jest.fn().mockResolvedValue([
-      { value: '0', label: 'DIAGNOSTIC' },
-      { value: '3', label: 'WARNING_LOW' },
-      { value: '6', label: 'FATAL' },
-    ]),
     ...overrides,
   } as unknown as DataSource;
 }
@@ -240,15 +233,12 @@ describe('QueryEditor — Telemetry', () => {
       expect(ds.getComponents).toHaveBeenCalled();
     });
 
-    expect(ds.getEventComponents).not.toHaveBeenCalled();
-    expect(ds.getEventNames).not.toHaveBeenCalled();
     expect(ds.getEventSources).not.toHaveBeenCalled();
-    expect(ds.getEventSeverities).not.toHaveBeenCalled();
   });
 });
 
 describe('QueryEditor — Events', () => {
-  it('renders event dropdowns when queryType is events', async () => {
+  it('renders only source dropdown when queryType is events', async () => {
     render(
       <QueryEditor
         {...buildProps({
@@ -257,10 +247,10 @@ describe('QueryEditor — Events', () => {
       />
     );
 
-    expect(screen.getByRole('combobox', { name: /Component/ })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /Event name/ })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /Source/ })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /Severity/ })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Component/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Event name/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Severity/ })).not.toBeInTheDocument();
   });
 
   it('hides telemetry fields when queryType is events', async () => {
@@ -273,22 +263,6 @@ describe('QueryEditor — Events', () => {
     );
 
     expect(screen.queryByRole('combobox', { name: /Channel/ })).not.toBeInTheDocument();
-  });
-
-  it('loads event components on mount', async () => {
-    const ds = mockDatasource();
-    render(
-      <QueryEditor
-        {...buildProps({
-          datasource: ds,
-          query: { refId: 'A', queryType: 'events' } as MyQuery,
-        })}
-      />
-    );
-
-    await waitFor(() => {
-      expect(ds.getEventComponents).toHaveBeenCalledTimes(1);
-    });
   });
 
   it('loads event sources on mount', async () => {
@@ -307,56 +281,6 @@ describe('QueryEditor — Events', () => {
     });
   });
 
-  it('loads event severities on mount', async () => {
-    const ds = mockDatasource();
-    render(
-      <QueryEditor
-        {...buildProps({
-          datasource: ds,
-          query: { refId: 'A', queryType: 'events' } as MyQuery,
-        })}
-      />
-    );
-
-    await waitFor(() => {
-      expect(ds.getEventSeverities).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('loads event names when component is set', async () => {
-    const ds = mockDatasource();
-    render(
-      <QueryEditor
-        {...buildProps({
-          datasource: ds,
-          query: { refId: 'A', queryType: 'events', component: 'CDH' } as MyQuery,
-        })}
-      />
-    );
-
-    await waitFor(() => {
-      expect(ds.getEventNames).toHaveBeenCalledWith('CDH');
-    });
-  });
-
-  it('does not load event names when component is not set', async () => {
-    const ds = mockDatasource();
-    render(
-      <QueryEditor
-        {...buildProps({
-          datasource: ds,
-          query: { refId: 'A', queryType: 'events' } as MyQuery,
-        })}
-      />
-    );
-
-    await waitFor(() => {
-      expect(ds.getEventComponents).toHaveBeenCalled();
-    });
-
-    expect(ds.getEventNames).not.toHaveBeenCalled();
-  });
-
   it('does not load telemetry resources when in events mode', async () => {
     const ds = mockDatasource();
     render(
@@ -369,7 +293,7 @@ describe('QueryEditor — Events', () => {
     );
 
     await waitFor(() => {
-      expect(ds.getEventComponents).toHaveBeenCalled();
+      expect(ds.getEventSources).toHaveBeenCalled();
     });
 
     expect(ds.getComponents).not.toHaveBeenCalled();
@@ -378,31 +302,25 @@ describe('QueryEditor — Events', () => {
     expect(ds.getKeys).not.toHaveBeenCalled();
   });
 
-  it('displays existing event query values', async () => {
+  it('displays existing event source value', async () => {
     render(
       <QueryEditor
         {...buildProps({
           query: {
             refId: 'A',
             queryType: 'events',
-            component: 'CDH',
-            eventName: 'SystemStartup',
             source: 'fsw-1',
           } as MyQuery,
         })}
       />
     );
 
-    expect(screen.getByDisplayValue('CDH')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('SystemStartup')).toBeInTheDocument();
     expect(screen.getByDisplayValue('fsw-1')).toBeInTheDocument();
   });
 
-  it('handles event resource fetch errors gracefully', async () => {
+  it('handles event source fetch errors gracefully', async () => {
     const ds = mockDatasource({
-      getEventComponents: jest.fn().mockRejectedValue(new Error('Network error')),
       getEventSources: jest.fn().mockRejectedValue(new Error('Network error')),
-      getEventSeverities: jest.fn().mockRejectedValue(new Error('Network error')),
     });
     render(
       <QueryEditor
@@ -414,9 +332,9 @@ describe('QueryEditor — Events', () => {
     );
 
     await waitFor(() => {
-      expect(ds.getEventComponents).toHaveBeenCalled();
+      expect(ds.getEventSources).toHaveBeenCalled();
     });
 
-    expect(screen.getByRole('combobox', { name: /Component/ })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Source/ })).toBeInTheDocument();
   });
 });
