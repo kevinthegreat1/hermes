@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Combobox, InlineField, RadioButtonGroup, Stack } from '@grafana/ui';
+import { CollapsableSection, Combobox, InlineField, RadioButtonGroup, Stack } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
 import type { ComboboxOption } from '@grafana/ui';
 import { DataSource } from '../datasource';
@@ -165,8 +165,8 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   );
 
   return (
-    <Stack direction="column" gap={0}>
-      <div style={{ marginBottom: 4 }}>
+    <Stack direction="column" gap={.5}>
+      <div style={{ marginTop: 8, marginBottom: 8 }}>
         <RadioButtonGroup
           id="query-editor-query-type"
           options={QUERY_TYPE_OPTIONS}
@@ -178,7 +178,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
 
       {queryType === 'telemetry' && (
         <>
-          <Stack gap={0}>
+          <Stack gap={.5}>
             <InlineField label="Component" labelWidth={16} tooltip="FSW component or module" required>
               <Combobox
                 id="query-editor-component"
@@ -204,7 +204,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
               />
             </InlineField>
           </Stack>
-          <Stack gap={0}>
+          <Stack gap={.5}>
             <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
               <Combobox
                 id="query-editor-source"
@@ -232,24 +232,58 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
               </InlineField>
             )}
           </Stack>
+          <CollapsableSection label="Time override" isOpen={false}>
+            <Stack gap={0}>
+              <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
+                <input
+                  type="datetime-local"
+                  style={{ height: 32, padding: '0 8px', border: '1px solid var(--border-medium)', borderRadius: 2, background: 'var(--background-primary)', color: 'var(--text-primary)', fontSize: 14 }}
+                />
+              </InlineField>
+              <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
+                <input
+                  type="datetime-local"
+                  style={{ height: 32, padding: '0 8px', border: '1px solid var(--border-medium)', borderRadius: 2, background: 'var(--background-primary)', color: 'var(--text-primary)', fontSize: 14 }}
+                />
+              </InlineField>
+            </Stack>
+          </CollapsableSection>
         </>
       )}
 
       {queryType === 'events' && (
-        <Stack gap={0}>
-          <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
-            <Combobox
-              id="query-editor-event-source"
-              options={eventSourceOptions}
-              value={query.source ?? null}
-              onChange={onSourceChange}
-              isClearable
-              loading={eventSourceLoading}
-              placeholder="All sources"
-              width={28}
-            />
-          </InlineField>
-        </Stack>
+        <>
+          <Stack gap={1}>
+            <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
+              <Combobox
+                id="query-editor-event-source"
+                options={eventSourceOptions}
+                value={query.source ?? null}
+                onChange={onSourceChange}
+                isClearable
+                loading={eventSourceLoading}
+                placeholder="All sources"
+                width={28}
+              />
+            </InlineField>
+          </Stack>
+          <CollapsableSection label="Time override" isOpen={false}>
+          <Stack gap={0}>
+            <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
+              <input
+                type="datetime-local"
+                style={{ height: 32, padding: '0 8px', border: '1px solid var(--border-medium)', borderRadius: 2, background: 'var(--background-primary)', color: 'var(--text-primary)', fontSize: 14 }}
+              />
+            </InlineField>
+            <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
+              <input
+                type="datetime-local"
+                style={{ height: 32, padding: '0 8px', border: '1px solid var(--border-medium)', borderRadius: 2, background: 'var(--background-primary)', color: 'var(--text-primary)', fontSize: 14 }}
+              />
+            </InlineField>
+          </Stack>
+          </CollapsableSection>
+        </>
       )}
     </Stack>
   );
