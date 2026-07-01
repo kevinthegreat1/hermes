@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { CollapsableSection, Combobox, InlineField, RadioButtonGroup, Stack } from '@grafana/ui';
-import { QueryEditorProps, SelectableValue } from '@grafana/data';
+import { CollapsableSection, Combobox, DateTimePicker, InlineField, RadioButtonGroup, Stack } from '@grafana/ui';
+import { dateTime, DateTime, QueryEditorProps, SelectableValue } from '@grafana/data';
 import type { ComboboxOption } from '@grafana/ui';
 import { DataSource } from '../datasource';
 import { MyDataSourceOptions, MyQuery, QueryType } from '../types';
@@ -15,7 +15,6 @@ const QUERY_TYPE_OPTIONS: Array<SelectableValue<QueryType>> = [
 function toOptions(values: string[]): Array<ComboboxOption<string>> {
   return values.map((v) => ({ label: v, value: v }));
 }
-
 
 export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) {
   const queryType = query.queryType ?? 'telemetry';
@@ -166,15 +165,15 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   );
 
   const onTimeOverrideFromChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange({ ...query, timeOverrideFrom: e.currentTarget.value || undefined });
+    (date?: DateTime) => {
+      onChange({ ...query, timeOverrideFrom: date ? date.toISOString() : undefined });
     },
     [onChange, query]
   );
 
   const onTimeOverrideToChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange({ ...query, timeOverrideTo: e.currentTarget.value || undefined });
+    (date?: DateTime) => {
+      onChange({ ...query, timeOverrideTo: date ? date.toISOString() : undefined });
     },
     [onChange, query]
   );
@@ -193,6 +192,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
           value={queryType}
           onChange={onQueryTypeChange}
           size="sm"
+          fullWidth={true}
         />
       </div>
 
@@ -255,19 +255,17 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
           <CollapsableSection label="Time override" isOpen={false}>
             <Stack gap={0}>
               <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
-                <input
-                  type="datetime-local"
-                  value={query.timeOverrideFrom ?? ''}
+                <DateTimePicker
+                  date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
                   onChange={onTimeOverrideFromChange}
-                  style={{ height: 32, padding: '0 8px', border: '1px solid var(--border-medium)', borderRadius: 2, background: 'var(--background-primary)', color: 'var(--text-primary)', fontSize: 14 }}
+                  clearable
                 />
               </InlineField>
               <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
-                <input
-                  type="datetime-local"
-                  value={query.timeOverrideTo ?? ''}
+                <DateTimePicker
+                  date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
                   onChange={onTimeOverrideToChange}
-                  style={{ height: 32, padding: '0 8px', border: '1px solid var(--border-medium)', borderRadius: 2, background: 'var(--background-primary)', color: 'var(--text-primary)', fontSize: 14 }}
+                  clearable
                 />
               </InlineField>
             </Stack>
@@ -294,19 +292,17 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
           <CollapsableSection label="Time override" isOpen={false}>
             <Stack gap={0}>
               <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
-                <input
-                  type="datetime-local"
-                  value={query.timeOverrideFrom ?? ''}
+                <DateTimePicker
+                  date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
                   onChange={onTimeOverrideFromChange}
-                  style={{ height: 32, padding: '0 8px', border: '1px solid var(--border-medium)', borderRadius: 2, background: 'var(--background-primary)', color: 'var(--text-primary)', fontSize: 14 }}
+                  clearable
                 />
               </InlineField>
               <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
-                <input
-                  type="datetime-local"
-                  value={query.timeOverrideTo ?? ''}
+                <DateTimePicker
+                  date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
                   onChange={onTimeOverrideToChange}
-                  style={{ height: 32, padding: '0 8px', border: '1px solid var(--border-medium)', borderRadius: 2, background: 'var(--background-primary)', color: 'var(--text-primary)', fontSize: 14 }}
+                  clearable
                 />
               </InlineField>
             </Stack>
