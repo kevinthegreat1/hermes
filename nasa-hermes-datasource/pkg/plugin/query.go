@@ -112,11 +112,9 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 		data.NewField("name", nil, []string{}),
 		data.NewField("severity", nil, []string{}),
 		data.NewField("message", nil, []string{}),
+		data.NewField("source", nil, []string{}),
+		data.NewField("args", nil, []string{}),
 	)
-	if qm.Source == "" {
-		frame.Fields = append(frame.Fields, data.NewField("source", nil, []string{}))
-	}
-	frame.Fields = append(frame.Fields, data.NewField("args", nil, []string{}))
 
 	for rows.Next() {
 		var t time.Time
@@ -128,11 +126,7 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 			return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("events row scan failure: %v", err.Error()))
 		}
 
-		if qm.Source == "" {
-			frame.AppendRow(t, component, name, severityLabel(severity), message, source, args)
-		} else {
-			frame.AppendRow(t, component, name, severityLabel(severity), message, args)
-		}
+		frame.AppendRow(t, component, name, severityLabel(severity), message, source, args)
 	}
 
 	response.Frames = append(response.Frames, frame)
