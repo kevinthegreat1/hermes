@@ -15,6 +15,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     const templateSrv = getTemplateSrv();
     return {
       ...query,
+      queryType: query.queryType ?? 'telemetry',
       component: query.component ? templateSrv.replace(query.component, scopedVars) : undefined,
       channel: query.channel ? templateSrv.replace(query.channel, scopedVars) : undefined,
       source: query.source ? templateSrv.replace(query.source, scopedVars) : undefined,

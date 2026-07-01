@@ -4,7 +4,7 @@ import { DataQuery } from '@grafana/schema';
 export type QueryType = 'telemetry' | 'events';
 
 export interface MyQuery extends DataQuery {
-  queryType?: QueryType;
+  queryType: QueryType;
   component?: string;
   channel?: string;
   source?: string;
