@@ -1,4 +1,4 @@
-name: Create Plugin Update
+name: Grafana Create Plugin Update
 
 on:
   workflow_dispatch:
