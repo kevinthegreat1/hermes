@@ -32,11 +32,12 @@ func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataReques
 }
 
 type queryModel struct {
-	QueryType string `json:"queryType"`
-	Component string `json:"component"`
-	Channel   string `json:"channel"`
-	Source    string `json:"source"`
-	Key       string `json:"key,omitempty"`
+	QueryType         string            `json:"queryType"`
+	Component         string            `json:"component"`
+	Channel           string            `json:"channel"`
+	Source            string            `json:"source"`
+	TimeRangeOverride backend.TimeRange `json:"timeRangeOverride"`
+	Key               string            `json:"key,omitempty"`
 }
 
 func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
@@ -48,11 +49,20 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 		return backend.ErrDataResponse(backend.StatusBadRequest, fmt.Sprintf("json unmarshal: %v", err.Error()))
 	}
 
+	queryFrom := query.TimeRange.From
+	queryTo := query.TimeRange.To
+	if !qm.TimeRangeOverride.From.IsZero() {
+		queryFrom = qm.TimeRangeOverride.From
+	}
+	if !qm.TimeRangeOverride.To.IsZero() {
+		queryTo = qm.TimeRangeOverride.To
+	}
+
 	switch qm.QueryType {
 	case "events":
-		return d.queryEvents(ctx, pCtx, qm, query)
+		return d.queryEvents(ctx, pCtx, qm, queryFrom, queryTo)
 	case "telemetry":
-		return d.queryTelemetry(ctx, pCtx, qm, query)
+		return d.queryTelemetry(ctx, pCtx, qm, queryFrom, queryTo, query.Interval)
 	}
 	return backend.ErrDataResponse(backend.StatusBadRequest, fmt.Sprintf("invalid query type: %s", qm.QueryType))
 }
@@ -74,13 +84,13 @@ func severityLabel(sev int64) string {
 	return fmt.Sprintf("UNKNOWN(%d)", sev)
 }
 
-func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, qm queryModel, query backend.DataQuery) backend.DataResponse {
+func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time) backend.DataResponse {
 	var response backend.DataResponse
 
 	queryArgs := []interface{}{
 		qm.Source,
-		query.TimeRange.From,
-		query.TimeRange.To,
+		queryFrom,
+		queryTo,
 	}
 
 	eventSQL := `
@@ -133,7 +143,7 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 	return response
 }
 
-func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext, qm queryModel, query backend.DataQuery) backend.DataResponse {
+func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time, queryInterval time.Duration) backend.DataResponse {
 	var response backend.DataResponse
 	if qm.Component == "" || qm.Channel == "" {
 		return response
@@ -159,7 +169,7 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 	}
 
 	// Resolve data column
-	rawSQL, queryArgs := buildSQLQuery(valueType, defID, qm, query)
+	rawSQL, queryArgs := buildSQLQuery(valueType, defID, qm, queryFrom, queryTo, queryInterval)
 
 	// Execute the query
 	rows, err := d.db.QueryContext(ctx, rawSQL, queryArgs...)
@@ -171,7 +181,7 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 	return buildResponse(qm, rows, response)
 }
 
-func buildSQLQuery(valueType string, defID int64, qm queryModel, query backend.DataQuery) (string, []interface{}) {
+func buildSQLQuery(valueType string, defID int64, qm queryModel, queryFrom time.Time, queryTo time.Time, queryInterval time.Duration) (string, []interface{}) {
 	targetColumn := "floating"
 	switch valueType {
 	case "int", "uint":
@@ -186,11 +196,11 @@ func buildSQLQuery(valueType string, defID int64, qm queryModel, query backend.D
 
 	// Configure query
 	var queryArgs []interface{}
-	queryArgs = append(queryArgs, defID, qm.Source, query.TimeRange.From, query.TimeRange.To, qm.Key)
+	queryArgs = append(queryArgs, defID, qm.Source, queryFrom, queryTo, qm.Key)
 
 	// Set time grouping interval
-	intervalStr := fmt.Sprintf("%d seconds", int(query.Interval.Seconds()))
-	if query.Interval.Seconds() < 1 {
+	intervalStr := fmt.Sprintf("%d seconds", int(queryInterval.Seconds()))
+	if queryInterval.Seconds() < 1 {
 		intervalStr = "1 second"
 	}
 	queryArgs = append(queryArgs, intervalStr)
