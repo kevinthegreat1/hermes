@@ -128,7 +128,7 @@ jobs:
       - name: Check plugin.json
         run: |
           docker run --pull=always \
-            -v $PWD/nasa-hermes-datasource/${ARCHIVE}:/archive.zip \
+            -v $PWD/${ARCHIVE}:/archive.zip \
             grafana/plugin-validator-cli -analyzer=metadatavalid /archive.zip
         env:
           ARCHIVE: ${{ steps.metadata.outputs.archive }}
