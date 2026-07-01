@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CollapsableSection, Combobox, DateTimePicker, InlineField, RadioButtonGroup, Stack } from '@grafana/ui';
+import { CollapsableSection, Combobox, DateTimePicker, InlineField, InlineFieldRow, RadioButtonGroup } from '@grafana/ui';
 import { dateTime, DateTime, QueryEditorProps, SelectableValue } from '@grafana/data';
 import type { ComboboxOption } from '@grafana/ui';
 import { DataSource } from '../datasource';
@@ -160,7 +160,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   };
 
   return (
-    <Stack direction="column" gap={.5}>
+    <>
       <div style={{ marginTop: 8, marginBottom: 8 }}>
         <RadioButtonGroup
           id="query-editor-query-type"
@@ -174,7 +174,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
 
       {queryType === 'telemetry' && (
         <>
-          <Stack gap={.5}>
+          <InlineFieldRow>
             <InlineField label="Component" labelWidth={16} tooltip="FSW component or module" required>
               <Combobox
                 id="query-editor-component"
@@ -199,8 +199,8 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
                 width={28}
               />
             </InlineField>
-          </Stack>
-          <Stack gap={.5}>
+          </InlineFieldRow>
+          <InlineFieldRow>
             <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
               <Combobox
                 id="query-editor-source"
@@ -227,9 +227,9 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
                 />
               </InlineField>
             )}
-          </Stack>
+          </InlineFieldRow>
           <CollapsableSection label="Time override" isOpen={false}>
-            <Stack gap={0}>
+            <InlineFieldRow>
               <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
                 <DateTimePicker
                   date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
@@ -244,14 +244,14 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
                   clearable
                 />
               </InlineField>
-            </Stack>
+            </InlineFieldRow>
           </CollapsableSection>
         </>
       )}
 
       {queryType === 'events' && (
         <>
-          <Stack gap={1}>
+          <InlineFieldRow>
             <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
               <Combobox
                 id="query-editor-event-source"
@@ -264,9 +264,9 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
                 width={28}
               />
             </InlineField>
-          </Stack>
+          </InlineFieldRow>
           <CollapsableSection label="Time override" isOpen={false}>
-            <Stack gap={0}>
+            <InlineFieldRow>
               <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
                 <DateTimePicker
                   date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
@@ -281,10 +281,10 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
                   clearable
                 />
               </InlineField>
-            </Stack>
+            </InlineFieldRow>
           </CollapsableSection>
         </>
       )}
-    </Stack>
+    </>
   );
 }
