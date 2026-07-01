@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CollapsableSection, Combobox, DateTimePicker, InlineField, RadioButtonGroup, Stack } from '@grafana/ui';
 import { dateTime, DateTime, QueryEditorProps, SelectableValue } from '@grafana/data';
 import type { ComboboxOption } from '@grafana/ui';
@@ -102,86 +102,62 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
 
   // --- Handlers ---
 
-  const onQueryTypeChange = useCallback(
-    (value: QueryType) => {
-      const updated = {
-        ...query,
-        queryType: value,
-        component: undefined,
-        channel: undefined,
-        key: undefined,
-        source: undefined,
-      };
-      onChange(updated);
-      if (value === 'events') {
-        onRunQuery();
-      }
-    },
-    [onChange, onRunQuery, query]
-  );
-
-  const onComponentChange = useCallback(
-    (option: ComboboxOption<string>) => {
-      onChange({ ...query, component: option.value, channel: undefined, key: undefined });
+  const onQueryTypeChange = (value: QueryType) => {
+    const updated = {
+      ...query,
+      queryType: value,
+      component: undefined,
+      channel: undefined,
+      key: undefined,
+      source: undefined,
+    };
+    onChange(updated);
+    if (value === 'events') {
       onRunQuery();
-    },
-    [onChange, onRunQuery, query]
-  );
+    }
+  };
 
-  const onChannelChange = useCallback(
-    (option: ComboboxOption<string>) => {
-      const updated = { ...query, channel: option.value, key: undefined };
-      onChange(updated);
-      if (updated.component && updated.channel) {
-        onRunQuery();
-      }
-    },
-    [onChange, onRunQuery, query]
-  );
-
-  const onSourceChange = useCallback(
-    (option: ComboboxOption<string> | null) => {
-      const updated = { ...query, source: option?.value ?? undefined };
-      onChange(updated);
-      if (queryType === 'telemetry' && updated.component && updated.channel) {
-        onRunQuery();
-      }
-      if (queryType === 'events') {
-        onRunQuery();
-      }
-    },
-    [onChange, onRunQuery, query, queryType]
-  );
-
-  const onKeyChange = useCallback(
-    (option: ComboboxOption<string> | null) => {
-      const updated = { ...query, key: option?.value ?? undefined };
-      onChange(updated);
-      if (updated.component && updated.channel) {
-        onRunQuery();
-      }
-    },
-    [onChange, onRunQuery, query]
-  );
-
-  const onTimeOverrideFromChange = useCallback(
-    (date?: DateTime) => {
-      onChange({ ...query, timeOverrideFrom: date ? date.toISOString() : undefined });
-    },
-    [onChange, query]
-  );
-
-  const onTimeOverrideToChange = useCallback(
-    (date?: DateTime) => {
-      onChange({ ...query, timeOverrideTo: date ? date.toISOString() : undefined });
-    },
-    [onChange, query]
-  );
-
-  useEffect(() => {
+  const onComponentChange = (option: ComboboxOption<string>) => {
+    onChange({ ...query, component: option.value, channel: undefined, key: undefined });
     onRunQuery();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.timeOverrideFrom, query.timeOverrideTo]);
+  };
+
+  const onChannelChange = (option: ComboboxOption<string>) => {
+    const updated = { ...query, channel: option.value, key: undefined };
+    onChange(updated);
+    if (updated.component && updated.channel) {
+      onRunQuery();
+    }
+  };
+
+  const onSourceChange = (option: ComboboxOption<string> | null) => {
+    const updated = { ...query, source: option?.value ?? undefined };
+    onChange(updated);
+    if (queryType === 'telemetry' && updated.component && updated.channel) {
+      onRunQuery();
+    }
+    if (queryType === 'events') {
+      onRunQuery();
+    }
+  };
+
+  const onKeyChange = (option: ComboboxOption<string> | null) => {
+    const updated = { ...query, key: option?.value ?? undefined };
+    onChange(updated);
+    if (updated.component && updated.channel) {
+      onRunQuery();
+    }
+  };
+
+  const onTimeOverrideFromChange = (date?: DateTime) => {
+    onChange({ ...query, timeOverrideFrom: date ? date.toISOString() : undefined });
+    onRunQuery();
+  };
+
+  const onTimeOverrideToChange = (date?: DateTime) => {
+    onChange({ ...query, timeOverrideTo: date ? date.toISOString() : undefined });
+    onRunQuery();
+  };
 
   return (
     <Stack direction="column" gap={.5}>
