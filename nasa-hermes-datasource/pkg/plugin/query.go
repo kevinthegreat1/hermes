@@ -36,7 +36,7 @@ type queryModel struct {
 	Component         string            `json:"component"`
 	Channel           string            `json:"channel"`
 	Source            string            `json:"source"`
-	TimeRangeOverride backend.TimeRange `json:"timeRangeOverride"`
+	TimeRangeOverride backend.TimeRange `json:"timeRangeOverride,omitempty"`
 	Key               string            `json:"key,omitempty"`
 }
 
