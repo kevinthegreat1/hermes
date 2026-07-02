@@ -27,7 +27,6 @@ function buildProps(
         host: '',
         user: '',
         database: '',
-        ert: false,
       },
       secureJsonFields: {},
       secureJsonData: {},
@@ -47,7 +46,6 @@ describe('ConfigEditor', () => {
     expect(screen.getByLabelText(/User/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Password/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Database/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/ERT/)).toBeInTheDocument();
   });
 
   it('calls onOptionsChange when Host is changed', () => {
@@ -78,33 +76,17 @@ describe('ConfigEditor', () => {
     );
   });
 
-  it('calls onOptionsChange when ERT checkbox is clicked', () => {
-    const onOptionsChange = jest.fn();
-    render(<ConfigEditor {...buildProps({ onOptionsChange })} />);
-
-    const ertCheckbox = screen.getByLabelText(/ERT/);
-    fireEvent.click(ertCheckbox);
-
-    expect(onOptionsChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        jsonData: expect.objectContaining({ ert: true }),
-      })
-    );
-  });
-
   it('displays existing values from jsonData', () => {
     const props = buildProps();
     props.options.jsonData = {
       host: 'localhost:5432',
       user: 'postgres',
       database: 'hermes',
-      ert: true,
     };
     render(<ConfigEditor {...props} />);
 
     expect(screen.getByDisplayValue('localhost:5432')).toBeInTheDocument();
     expect(screen.getByDisplayValue('postgres')).toBeInTheDocument();
     expect(screen.getByDisplayValue('hermes')).toBeInTheDocument();
-    expect(screen.getByLabelText(/ERT/)).toBeChecked();
   });
 });

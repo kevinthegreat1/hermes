@@ -13,7 +13,6 @@ func TestLoadPluginSettings(t *testing.T) {
 			"host":     "localhost:5432",
 			"user":     "postgres",
 			"database": "hermes",
-			"ert":      true,
 		})
 
 		settings, err := LoadPluginSettings(backend.DataSourceInstanceSettings{
@@ -34,9 +33,6 @@ func TestLoadPluginSettings(t *testing.T) {
 		}
 		if settings.Database != "hermes" {
 			t.Errorf("expected Database 'hermes', got '%s'", settings.Database)
-		}
-		if settings.Ert != true {
-			t.Errorf("expected Ert true, got false")
 		}
 		if settings.Secrets.Password != "secret" {
 			t.Errorf("expected Password 'secret', got '%s'", settings.Secrets.Password)
@@ -59,9 +55,6 @@ func TestLoadPluginSettings(t *testing.T) {
 		}
 		if settings.User != "" {
 			t.Errorf("expected User '', got '%s'", settings.User)
-		}
-		if settings.Ert != false {
-			t.Errorf("expected Ert false, got true")
 		}
 		if settings.Secrets.Password != "" {
 			t.Errorf("expected Password '', got '%s'", settings.Secrets.Password)

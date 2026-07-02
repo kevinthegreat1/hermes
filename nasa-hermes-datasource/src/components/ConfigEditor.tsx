@@ -1,5 +1,5 @@
 import React, { ChangeEvent } from 'react';
-import { Checkbox, InlineField, Input, SecretInput } from '@grafana/ui';
+import { InlineField, Input, SecretInput } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
 import { MyDataSourceOptions, MySecureJsonData } from '../types';
 
@@ -27,13 +27,6 @@ export function ConfigEditor(props: Props) {
     onOptionsChange({
       ...options,
       jsonData: { ...jsonData, database: event.target.value },
-    });
-  };
-
-  const onErtChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onOptionsChange({
-      ...options,
-      jsonData: { ...jsonData, ert: event.target.checked },
     });
   };
 
@@ -90,13 +83,6 @@ export function ConfigEditor(props: Props) {
           value={jsonData.database ?? ''}
           placeholder=""
           width={40}
-        />
-      </InlineField>
-      <InlineField label="ERT" labelWidth={14} tooltip="Attach Earth-Return-Time as an additional field to every row">
-        <Checkbox
-          id="config-editor-ert"
-          onChange={onErtChange}
-          value={jsonData.ert ?? false}
         />
       </InlineField>
     </>

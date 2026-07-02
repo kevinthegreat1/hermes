@@ -11,7 +11,6 @@ type PluginSettings struct {
 	Host     string                `json:"host"`
 	User     string                `json:"user"`
 	Database string                `json:"database"`
-	Ert      bool                  `json:"ert"`
 	Secrets  *SecretPluginSettings `json:"-"`
 }
 
