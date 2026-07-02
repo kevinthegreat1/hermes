@@ -38,95 +38,6 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   const [eventSourceOptions, setEventSourceOptions] = useState<Array<ComboboxOption<string>>>([]);
   const [eventSourceLoading, setEventSourceLoading] = useState(false);
 
-  // --- Telemetry data loading ---
-
-  useEffect(() => {
-    if (queryType !== 'telemetry') {
-      return;
-    }
-    const loadComponents = async () => {
-      setComponentLoading(true);
-      datasource
-        .getComponents()
-        .then((values) => setComponentOptions(toOptions(values)))
-        .catch(() => setComponentOptions([]))
-        .finally(() => setComponentLoading(false));
-    };
-    loadComponents();
-  }, [datasource, queryType]);
-
-  useEffect(() => {
-    if (queryType !== 'telemetry') {
-      return;
-    }
-    const loadSources = async () => {
-      setSourceLoading(true);
-      datasource
-        .getSources()
-        .then((values) => setSourceOptions(toOptions(values)))
-        .catch(() => setSourceOptions([]))
-        .finally(() => setSourceLoading(false));
-    };
-    loadSources();
-  }, [datasource, queryType]);
-
-  useEffect(() => {
-    if (queryType !== 'telemetry' || !query.component) {
-      setTimeout(() => setChannelOptions([]), 0);
-      return;
-    }
-    const loadChannels = async () => {
-      setChannelLoading(true);
-      datasource
-        .getChannels(query.component ?? "")
-        .then((values) => {
-          const options = toOptions(values)
-          setChannelOptions(options);
-
-          // Auto select if there is only one channel
-          if (options.length === 1) {
-            onChannelChange(options[0]);
-          }
-        })
-        .catch(() => setChannelOptions([]))
-        .finally(() => setChannelLoading(false));
-    };
-    loadChannels();
-  }, [datasource, queryType, query.component]);
-
-  useEffect(() => {
-    if (queryType !== 'telemetry' || !query.component || !query.channel) {
-      setTimeout(() => setKeyOptions([]), 0);
-      return;
-    }
-    const loadKeys = async () => {
-      setKeyLoading(true);
-      datasource
-        .getKeys(query.component ?? "", query.channel ?? "")
-        .then((values) => setKeyOptions(toOptions(values)))
-        .catch(() => setKeyOptions([]))
-        .finally(() => setKeyLoading(false));
-    }
-    loadKeys();
-  }, [datasource, queryType, query.component, query.channel]);
-
-  // --- Event data loading ---
-
-  useEffect(() => {
-    if (queryType !== 'events') {
-      return;
-    }
-    const loadEventSources = async () => {
-      setEventSourceLoading(true);
-      datasource
-        .getEventSources()
-        .then((values) => setEventSourceOptions(toOptions(values)))
-        .catch(() => setEventSourceOptions([]))
-        .finally(() => setEventSourceLoading(false));
-    }
-    loadEventSources();
-  }, [datasource, queryType]);
-
   // --- Handlers ---
 
   const onQueryTypeChange = (value: QueryType) => {
@@ -190,6 +101,97 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     onChange({ ...query, timeOverrideTo: date ? date.toISOString() : undefined });
     onRunQuery();
   };
+
+  // --- Telemetry data loading ---
+
+  useEffect(() => {
+    if (queryType !== 'telemetry') {
+      return;
+    }
+    const loadComponents = async () => {
+      setComponentLoading(true);
+      datasource
+        .getComponents()
+        .then((values) => setComponentOptions(toOptions(values)))
+        .catch(() => setComponentOptions([]))
+        .finally(() => setComponentLoading(false));
+    };
+    loadComponents();
+  }, [datasource, queryType]);
+
+  useEffect(() => {
+    if (queryType !== 'telemetry') {
+      return;
+    }
+    const loadSources = async () => {
+      setSourceLoading(true);
+      datasource
+        .getSources()
+        .then((values) => setSourceOptions(toOptions(values)))
+        .catch(() => setSourceOptions([]))
+        .finally(() => setSourceLoading(false));
+    };
+    loadSources();
+  }, [datasource, queryType]);
+
+  useEffect(() => {
+    if (queryType !== 'telemetry' || !query.component) {
+      setTimeout(() => setChannelOptions([]), 0);
+      return;
+    }
+    const loadChannels = async () => {
+      setChannelLoading(true);
+      datasource
+        .getChannels(query.component ?? "")
+        .then((values) => {
+          const options = toOptions(values)
+          setChannelOptions(options);
+
+          // Auto select if there is only one channel
+          if (options.length === 1) {
+            onChannelChange(options[0]);
+          }
+        })
+        .catch(() => setChannelOptions([]))
+        .finally(() => setChannelLoading(false));
+    };
+    loadChannels();
+    // We do not need onChannelChange in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datasource, queryType, query.component]);
+
+  useEffect(() => {
+    if (queryType !== 'telemetry' || !query.component || !query.channel) {
+      setTimeout(() => setKeyOptions([]), 0);
+      return;
+    }
+    const loadKeys = async () => {
+      setKeyLoading(true);
+      datasource
+        .getKeys(query.component ?? "", query.channel ?? "")
+        .then((values) => setKeyOptions(toOptions(values)))
+        .catch(() => setKeyOptions([]))
+        .finally(() => setKeyLoading(false));
+    }
+    loadKeys();
+  }, [datasource, queryType, query.component, query.channel]);
+
+  // --- Event data loading ---
+
+  useEffect(() => {
+    if (queryType !== 'events') {
+      return;
+    }
+    const loadEventSources = async () => {
+      setEventSourceLoading(true);
+      datasource
+        .getEventSources()
+        .then((values) => setEventSourceOptions(toOptions(values)))
+        .catch(() => setEventSourceOptions([]))
+        .finally(() => setEventSourceLoading(false));
+    }
+    loadEventSources();
+  }, [datasource, queryType]);
 
   return (
     <>
