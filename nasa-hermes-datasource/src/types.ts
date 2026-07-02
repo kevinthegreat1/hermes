@@ -2,6 +2,7 @@ import { DataSourceJsonData } from '@grafana/data';
 import { DataQuery } from '@grafana/schema';
 
 export type QueryType = 'telemetry' | 'events';
+export type TimeField = 'time' | 'ert';
 
 export interface MyQuery extends DataQuery {
   queryType: QueryType;
@@ -9,6 +10,7 @@ export interface MyQuery extends DataQuery {
   channel?: string;
   source?: string;
   key?: string;
+  timeField?: TimeField;
   timeOverrideFrom?: string;
   timeOverrideTo?: string;
 }

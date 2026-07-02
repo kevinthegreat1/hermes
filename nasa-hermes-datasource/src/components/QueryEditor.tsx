@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { CollapsableSection, Combobox, ComboboxOption, DateTimePicker, InlineField, InlineFieldRow, RadioButtonGroup } from '@grafana/ui';
+import { CollapsableSection, Combobox, ComboboxOption, DateTimePicker, InlineField, RadioButtonGroup } from '@grafana/ui';
 import { dateTime, DateTime, QueryEditorProps, SelectableValue } from '@grafana/data';
 import { DataSource } from '../datasource';
-import { MyDataSourceOptions, MyQuery, QueryType } from '../types';
+import { MyDataSourceOptions, MyQuery, QueryType, TimeField } from '../types';
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
 const QUERY_TYPE_OPTIONS: Array<SelectableValue<QueryType>> = [
   { label: 'Telemetry', value: 'telemetry' },
   { label: 'Events', value: 'events' },
+];
+
+const TIME_FIELD_OPTIONS: Array<SelectableValue<TimeField>> = [
+  { label: 'TIME', value: 'time' },
+  { label: 'ERT', value: 'ert' },
 ];
 
 function toOptions(values: string[]): Array<ComboboxOption<string>> {
@@ -163,6 +168,11 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     }
   };
 
+  const onTimeFieldChange = (value: TimeField) => {
+    onChange({ ...query, timeField: value });
+    onRunQuery();
+  };
+
   const onTimeOverrideFromChange = (date?: DateTime) => {
     onChange({ ...query, timeOverrideFrom: date ? date.toISOString() : undefined });
     onRunQuery();
@@ -188,114 +198,124 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
 
       {queryType === 'telemetry' && (
         <>
-          <InlineFieldRow>
-            <InlineField label="Component" labelWidth={16} tooltip="FSW component or module" required>
+          <InlineField label="Component" labelWidth={16} tooltip="FSW component or module" required>
+            <Combobox
+              id="query-editor-component"
+              options={componentOptions}
+              value={query.component ?? null}
+              onChange={onComponentChange}
+              loading={componentLoading}
+              placeholder="Select component"
+              width={28}
+            />
+          </InlineField>
+          <InlineField label="Channel" labelWidth={16} tooltip="Telemetry channel name" required>
+            <Combobox
+              key={`channel-${query.component ?? ''}`}
+              id="query-editor-channel"
+              options={channelOptions}
+              value={query.channel ?? null}
+              onChange={onChannelChange}
+              loading={channelLoading}
+              disabled={!query.component}
+              placeholder={query.component ? 'Select channel' : 'Select a component first'}
+              width={28}
+            />
+          </InlineField>
+          <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
+            <Combobox
+              id="query-editor-source"
+              options={sourceOptions}
+              value={query.source ?? null}
+              onChange={onSourceChange}
+              isClearable
+              loading={sourceLoading}
+              placeholder="All sources"
+              width={28}
+            />
+          </InlineField>
+          <div style={{ marginTop: 8, marginBottom: 8 }}>
+            <RadioButtonGroup
+              id="query-editor-time-field"
+              options={TIME_FIELD_OPTIONS}
+              value={query.timeField ?? 'time'}
+              onChange={onTimeFieldChange}
+              size="sm"
+              fullWidth={false}
+            />
+          </div>
+          {keyOptions.length > 1 && (
+            <InlineField label="Key" labelWidth={16} tooltip="Value field path for compound channels">
               <Combobox
-                id="query-editor-component"
-                options={componentOptions}
-                value={query.component ?? null}
-                onChange={onComponentChange}
-                loading={componentLoading}
-                placeholder="Select component"
-                width={28}
-              />
-            </InlineField>
-            <InlineField label="Channel" labelWidth={16} tooltip="Telemetry channel name" required>
-              <Combobox
-                key={`channel-${query.component ?? ''}`}
-                id="query-editor-channel"
-                options={channelOptions}
-                value={query.channel ?? null}
-                onChange={onChannelChange}
-                loading={channelLoading}
-                disabled={!query.component}
-                placeholder={query.component ? 'Select channel' : 'Select a component first'}
-                width={28}
-              />
-            </InlineField>
-          </InlineFieldRow>
-          <InlineFieldRow>
-            <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
-              <Combobox
-                id="query-editor-source"
-                options={sourceOptions}
-                value={query.source ?? null}
-                onChange={onSourceChange}
+                id="query-editor-key"
+                options={keyOptions}
+                value={query.key ?? null}
+                onChange={onKeyChange}
                 isClearable
-                loading={sourceLoading}
-                placeholder="All sources"
+                loading={keyLoading}
+                placeholder="All keys"
                 width={28}
               />
             </InlineField>
-            {keyOptions.length > 1 && (
-              <InlineField label="Key" labelWidth={16} tooltip="Value field path for compound channels">
-                <Combobox
-                  id="query-editor-key"
-                  options={keyOptions}
-                  value={query.key ?? null}
-                  onChange={onKeyChange}
-                  isClearable
-                  loading={keyLoading}
-                  placeholder="All keys"
-                  width={28}
-                />
-              </InlineField>
-            )}
-          </InlineFieldRow>
+          )}
           <CollapsableSection label="Time override" isOpen={false}>
-            <InlineFieldRow>
-              <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
-                <DateTimePicker
-                  date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
-                  onChange={onTimeOverrideFromChange}
-                  clearable
-                />
-              </InlineField>
-              <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
-                <DateTimePicker
-                  date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
-                  onChange={onTimeOverrideToChange}
-                  clearable
-                />
-              </InlineField>
-            </InlineFieldRow>
+            <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
+              <DateTimePicker
+                date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
+                onChange={onTimeOverrideFromChange}
+                clearable
+              />
+            </InlineField>
+            <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
+              <DateTimePicker
+                date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
+                onChange={onTimeOverrideToChange}
+                clearable
+              />
+            </InlineField>
           </CollapsableSection>
         </>
       )}
 
       {queryType === 'events' && (
         <>
-          <InlineFieldRow>
-            <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
-              <Combobox
-                id="query-editor-event-source"
-                options={eventSourceOptions}
-                value={query.source ?? null}
-                onChange={onSourceChange}
-                isClearable
-                loading={eventSourceLoading}
-                placeholder="All sources"
-                width={28}
+          <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
+            <Combobox
+              id="query-editor-event-source"
+              options={eventSourceOptions}
+              value={query.source ?? null}
+              onChange={onSourceChange}
+              isClearable
+              loading={eventSourceLoading}
+              placeholder="All sources"
+              width={28}
+            />
+          </InlineField>
+          <div style={{ marginTop: 8, marginBottom: 8 }}>
+            <RadioButtonGroup
+              id="query-editor-event-time-field"
+              options={TIME_FIELD_OPTIONS}
+              value={query.timeField ?? 'time'}
+              onChange={onTimeFieldChange}
+              size="sm"
+              fullWidth={true}
+            />
+          </div>
+          <CollapsableSection label="Time override" isOpen={false}>
+            <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
+              <DateTimePicker
+                date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
+                onChange={onTimeOverrideFromChange}
+                clearable
               />
             </InlineField>
-          </InlineFieldRow>
-          <CollapsableSection label="Time override" isOpen={false}>
-            <InlineFieldRow>
-              <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
-                <DateTimePicker
-                  date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
-                  onChange={onTimeOverrideFromChange}
-                  clearable
-                />
-              </InlineField>
-              <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
-                <DateTimePicker
-                  date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
-                  onChange={onTimeOverrideToChange}
-                  clearable
-                />
-              </InlineField>
-            </InlineFieldRow>
+            <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
+              <DateTimePicker
+                date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
+                onChange={onTimeOverrideToChange}
+                clearable
+              />
+            </InlineField>
           </CollapsableSection>
         </>
       )}
