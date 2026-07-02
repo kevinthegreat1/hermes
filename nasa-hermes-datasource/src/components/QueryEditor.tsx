@@ -79,7 +79,15 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       setChannelLoading(true);
       datasource
         .getChannels(query.component ?? "")
-        .then((values) => setChannelOptions(toOptions(values)))
+        .then((values) => {
+          const options = toOptions(values)
+          setChannelOptions(options);
+
+          // Auto select if there is only one channel
+          if (options.length === 1) {
+            onChannelChange(options[0]);
+          }
+        })
         .catch(() => setChannelOptions([]))
         .finally(() => setChannelLoading(false));
     };
