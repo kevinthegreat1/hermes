@@ -298,7 +298,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
               value={query.timeField ?? 'time'}
               onChange={onTimeFieldChange}
               size="sm"
-              fullWidth={true}
+              fullWidth={false}
             />
           </div>
           <CollapsableSection label="Time override" isOpen={false}>
