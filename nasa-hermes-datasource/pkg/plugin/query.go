@@ -39,6 +39,7 @@ type queryModel struct {
 	TimeOverrideFrom string `json:"timeOverrideFrom,omitempty"`
 	TimeOverrideTo   string `json:"timeOverrideTo,omitempty"`
 	Key              string `json:"key,omitempty"`
+	TimeField        string `json:"timeField,omitempty"`
 }
 
 func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
@@ -63,11 +64,21 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 		}
 	}
 
+	var timeColumn string
+	switch qm.TimeField {
+	case "time":
+		timeColumn = "time"
+	case "ert":
+		timeColumn = "ert"
+	default:
+		return backend.ErrDataResponse(backend.StatusBadRequest, fmt.Sprintf("invalid time type: %s", qm.TimeField))
+	}
+
 	switch qm.QueryType {
 	case "events":
-		return d.queryEvents(ctx, pCtx, qm, queryFrom, queryTo)
+		return d.queryEvents(ctx, pCtx, qm, queryFrom, queryTo, timeColumn)
 	case "telemetry":
-		return d.queryTelemetry(ctx, pCtx, qm, queryFrom, queryTo, query.Interval)
+		return d.queryTelemetry(ctx, pCtx, qm, queryFrom, queryTo, timeColumn, query.Interval)
 	}
 	return backend.ErrDataResponse(backend.StatusBadRequest, fmt.Sprintf("invalid query type: %s", qm.QueryType))
 }
@@ -89,7 +100,7 @@ func severityLabel(sev int64) string {
 	return fmt.Sprintf("UNKNOWN(%d)", sev)
 }
 
-func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time) backend.DataResponse {
+func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time, timeColumn string) backend.DataResponse {
 	var response backend.DataResponse
 
 	queryArgs := []interface{}{
@@ -98,9 +109,9 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 		queryTo,
 	}
 
-	eventSQL := `
+	eventSQL := fmt.Sprintf(`
 		SELECT 
-			e.time,
+			e.%s,
 			d.component,
 			d.name,
 			d.severity,
@@ -110,9 +121,9 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 		FROM eventDefs d
 		JOIN events e ON e.eventDefId = d.id
 		WHERE ($1 = '' OR e.source = $1)
-		  AND e.time >= $2
-		  AND e.time <= $3
-		ORDER BY e.time ASC;`
+		  AND e.%s >= $2
+		  AND e.%s <= $3
+		ORDER BY e.%s ASC;`, timeColumn, timeColumn, timeColumn, timeColumn)
 
 	rows, err := d.db.QueryContext(ctx, eventSQL, queryArgs...)
 	if err != nil {
@@ -122,7 +133,7 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 
 	frame := data.NewFrame("Events")
 	frame.Fields = append(frame.Fields,
-		data.NewField("time", nil, []time.Time{}),
+		data.NewField(timeColumn, nil, []time.Time{}),
 		data.NewField("component", nil, []string{}),
 		data.NewField("name", nil, []string{}),
 		data.NewField("severity", nil, []string{}),
@@ -148,7 +159,7 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 	return response
 }
 
-func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time, queryInterval time.Duration) backend.DataResponse {
+func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time, timeColumn string, queryInterval time.Duration) backend.DataResponse {
 	var response backend.DataResponse
 	if qm.Component == "" || qm.Channel == "" {
 		return response
@@ -176,9 +187,9 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 	}
 
 	// TODO: also consider having valueType in telemetryDefs instead of telemetry
-	rawSQL := `
+	rawSQL := fmt.Sprintf(`
 		SELECT 
-			time_bucket($7::interval, t.time) AS time_bucket,
+			time_bucket($7::interval, t.%s) AS time_bucket,
 			t.valueType,
 			t.key,
 			AVG(t.integral::double precision) AS val_int,
@@ -190,10 +201,10 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 		WHERE d.component = $1
 		  AND d.name = $2
 		  AND ($3 = '' OR t.source = $3)
-		  AND t.time >= $4 AND t.time <= $5
+		  AND t.%s >= $4 AND t.%s <= $5
 		  AND ($6 = '' OR t.key LIKE $6)
 		GROUP BY time_bucket, t.valueType, t.key
-		ORDER BY time_bucket ASC;`
+		ORDER BY time_bucket ASC;`, timeColumn, timeColumn, timeColumn)
 
 	// Execute the query
 	rows, err := d.db.QueryContext(ctx, rawSQL, queryArgs...)
@@ -218,13 +229,13 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 			return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("telemetry row scan failure: %v", err.Error()))
 		}
 
-		frameId := fmt.Sprintf("%s.%s.%s", qm.Component, qm.Channel, key)
+		frameId := fmt.Sprintf("%s.%s.%s/%s", qm.Component, qm.Channel, key, qm.TimeField)
 		frame, exists := frames[frameId]
 
 		// Create new frame
 		if !exists {
 			frame = data.NewFrame(frameId)
-			frame.Fields = append(frame.Fields, data.NewField("time", nil, []time.Time{}))
+			frame.Fields = append(frame.Fields, data.NewField(qm.TimeField, nil, []time.Time{}))
 
 			var valueField *data.Field
 			switch dbValueType {
@@ -239,6 +250,7 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 				"component": qm.Component,
 				"channel":   qm.Channel,
 				"key":       key,
+				"timeField": qm.TimeField,
 			}
 			frame.Fields = append(frame.Fields, valueField)
 			frames[frameId] = frame
