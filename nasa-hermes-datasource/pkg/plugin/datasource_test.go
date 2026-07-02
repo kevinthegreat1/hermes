@@ -180,7 +180,7 @@ func TestBuildResponseIntType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now().Truncate(time.Second)
 	rows := sqlmock.NewRows([]string{"time_bucket", "valueType", "val_int", "val_float", "val_bool", "val_str"}).
@@ -220,7 +220,7 @@ func TestBuildResponseUintType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now().Truncate(time.Second)
 	rows := sqlmock.NewRows([]string{"time_bucket", "valueType", "val_int", "val_float", "val_bool", "val_str"}).
@@ -245,7 +245,7 @@ func TestBuildResponseFloatType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now().Truncate(time.Second)
 	rows := sqlmock.NewRows([]string{"time_bucket", "valueType", "val_int", "val_float", "val_bool", "val_str"}).
@@ -266,7 +266,7 @@ func TestBuildResponseBoolType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now().Truncate(time.Second)
 	rows := sqlmock.NewRows([]string{"time_bucket", "valueType", "val_int", "val_float", "val_bool", "val_str"}).
@@ -292,7 +292,7 @@ func TestBuildResponseStringType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now().Truncate(time.Second)
 	rows := sqlmock.NewRows([]string{"time_bucket", "valueType", "val_int", "val_float", "val_bool", "val_str"}).
@@ -313,7 +313,7 @@ func TestBuildResponseEnumType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now().Truncate(time.Second)
 	// enum falls through to default (string) branch in buildResponse
@@ -335,7 +335,7 @@ func TestBuildResponseNullValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now().Truncate(time.Second)
 	// All value columns are NULL
@@ -357,7 +357,7 @@ func TestBuildResponseEmptyRows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	rows := sqlmock.NewRows([]string{"time_bucket", "valueType", "val_int", "val_float", "val_bool", "val_str"})
 
@@ -379,7 +379,7 @@ func TestQueryEventsWithMock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ds := Datasource{db: db}
 	now := time.Now().Truncate(time.Second)
@@ -428,7 +428,7 @@ func TestQueryTelemetryWithMock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ds := Datasource{db: db}
 	now := time.Now().Truncate(time.Second)
