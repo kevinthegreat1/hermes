@@ -15,7 +15,7 @@ export interface MyQuery extends DataQuery {
   timeOverrideTo?: string;
 }
 
-export const DEFAULT_QUERY: Partial<MyQuery> = { queryType: 'telemetry' };
+export const DEFAULT_QUERY: Partial<MyQuery> = { queryType: 'telemetry', timeField: 'time' };
 
 export interface DataPoint {
   Time: number;
