@@ -237,7 +237,7 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 			return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("telemetry row scan failure: %v", err.Error()))
 		}
 
-		frameId := fmt.Sprintf("%s.%s.%s/%s", component, channel, key, qm.TimeField)
+		frameId := fmt.Sprintf("%s.%s.%s/%s(%s)", component, channel, key, qm.TimeField, source)
 		frame, exists := frames[frameId]
 
 		// Create new frame
@@ -258,6 +258,7 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 				"component": component,
 				"channel":   channel,
 				"key":       key,
+				"source":    source,
 				"timeField": qm.TimeField,
 			}
 			frame.Fields = append(frame.Fields, valueField)
