@@ -3,13 +3,13 @@ module github.com/nasa/hermes-datasource
 go 1.26.3
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/grafana/grafana-plugin-sdk-go v0.292.1
 	github.com/lib/pq v1.12.3
 )
 
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect
-	github.com/DATA-DOG/go-sqlmock v1.5.2 // indirect
 	github.com/apache/arrow-go/v18 v18.6.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect

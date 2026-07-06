@@ -105,7 +105,7 @@ func severityLabel(sev int64) string {
 func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time, timeColumn string) backend.DataResponse {
 	var response backend.DataResponse
 
-	queryArgs := []interface{}{
+	queryArgs := []any{
 		pq.Array(qm.Sources),
 		queryFrom,
 		queryTo,
@@ -196,7 +196,7 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 		intervalStr = "1 second"
 	}
 
-	queryArgs := []interface{}{
+	queryArgs := []any{
 		pq.Array(qm.Components),
 		pq.Array(channelNames(qm.Channels)),
 		pq.Array(qm.Sources),

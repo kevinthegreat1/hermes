@@ -9,7 +9,7 @@ import (
 
 func TestLoadPluginSettings(t *testing.T) {
 	t.Run("unmarshals all fields correctly", func(t *testing.T) {
-		jsonData, _ := json.Marshal(map[string]interface{}{
+		jsonData, _ := json.Marshal(map[string]any{
 			"host":     "localhost:5432",
 			"user":     "postgres",
 			"database": "hermes",
@@ -40,7 +40,7 @@ func TestLoadPluginSettings(t *testing.T) {
 	})
 
 	t.Run("handles empty optional fields", func(t *testing.T) {
-		jsonData, _ := json.Marshal(map[string]interface{}{
+		jsonData, _ := json.Marshal(map[string]any{
 			"host":     "localhost:5432",
 			"database": "hermes",
 		})

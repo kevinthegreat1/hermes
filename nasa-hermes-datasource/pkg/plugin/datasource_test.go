@@ -486,7 +486,7 @@ func TestCheckHealth(t *testing.T) {
 	ds := Datasource{}
 
 	t.Run("returns error when host is missing", func(t *testing.T) {
-		jsonData, _ := json.Marshal(map[string]interface{}{
+		jsonData, _ := json.Marshal(map[string]any{
 			"host":     "",
 			"database": "hermes",
 		})
@@ -512,7 +512,7 @@ func TestCheckHealth(t *testing.T) {
 	})
 
 	t.Run("returns error when database is missing", func(t *testing.T) {
-		jsonData, _ := json.Marshal(map[string]interface{}{
+		jsonData, _ := json.Marshal(map[string]any{
 			"host":     "localhost:5432",
 			"database": "",
 		})
@@ -538,7 +538,7 @@ func TestCheckHealth(t *testing.T) {
 	})
 
 	t.Run("returns error when db is nil", func(t *testing.T) {
-		jsonData, _ := json.Marshal(map[string]interface{}{
+		jsonData, _ := json.Marshal(map[string]any{
 			"host":     "localhost:5432",
 			"database": "hermes",
 		})

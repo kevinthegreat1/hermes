@@ -132,7 +132,7 @@ func (d *Datasource) handleGetEventSources(w http.ResponseWriter, r *http.Reques
 	writeJSONResponse(w, items)
 }
 
-func writeJSONResponse(w http.ResponseWriter, data interface{}) {
+func writeJSONResponse(w http.ResponseWriter, data any) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
