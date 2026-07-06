@@ -25,10 +25,14 @@ function toChannelOptions(entries: Array<{ component: string; name: string }>): 
   for (const e of entries) {
     nameCounts.set(e.name, (nameCounts.get(e.name) ?? 0) + 1);
   }
-  return entries.map((e) => ({
-    label: (nameCounts.get(e.name) ?? 0) > 1 ? `${e.name} (${e.component})` : e.name,
-    value: `${e.component}:${e.name}`,
-  }));
+  return entries.map((e) => {
+    const isDuplicate = (nameCounts.get(e.name) ?? 0) > 1;
+    return {
+      label: isDuplicate ? `${e.name} (${e.component})` : e.name,
+      description: isDuplicate ? e.component : undefined,
+      value: `${e.component}:${e.name}`,
+    };
+  });
 }
 
 function channelName(composite: string): string {
