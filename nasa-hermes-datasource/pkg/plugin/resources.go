@@ -27,28 +27,33 @@ func (d *Datasource) handleGetTelemetryComponents(w http.ResponseWriter, r *http
 	writeJSONResponse(w, items)
 }
 
+type channelEntry struct {
+	Component string `json:"component"`
+	Name      string `json:"name"`
+}
+
 func (d *Datasource) handleGetTelemetryChannels(w http.ResponseWriter, r *http.Request) {
 	components := r.URL.Query()["components"]
 	if len(components) == 0 {
-		writeJSONResponse(w, []string{})
+		writeJSONResponse(w, []channelEntry{})
 		return
 	}
 
-	rows, err := d.db.QueryContext(r.Context(), "SELECT name FROM telemetryDefs WHERE component = ANY($1) ORDER BY name;", pq.Array(components))
+	rows, err := d.db.QueryContext(r.Context(), "SELECT component, name FROM telemetryDefs WHERE component = ANY($1) ORDER BY component, name;", pq.Array(components))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer func() { _ = rows.Close() }()
 
-	items := []string{}
+	items := []channelEntry{}
 	for rows.Next() {
-		var item string
-		if err := rows.Scan(&item); err != nil {
+		var entry channelEntry
+		if err := rows.Scan(&entry.Component, &entry.Name); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		items = append(items, item)
+		items = append(items, entry)
 	}
 	writeJSONResponse(w, items)
 }

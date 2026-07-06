@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -160,6 +161,20 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 	return response
 }
 
+// channelNames extracts the plain channel name from composite "component:name"
+// values. Plain names (without ":") are returned as-is.
+func channelNames(channels []string) []string {
+	names := make([]string, len(channels))
+	for i, ch := range channels {
+		if idx := strings.Index(ch, ":"); idx >= 0 {
+			names[i] = ch[idx+1:]
+		} else {
+			names[i] = ch
+		}
+	}
+	return names
+}
+
 func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time, timeColumn string, queryInterval time.Duration) backend.DataResponse {
 	var response backend.DataResponse
 	if len(qm.Components) == 0 || len(qm.Channels) == 0 {
@@ -183,7 +198,7 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 
 	queryArgs := []interface{}{
 		pq.Array(qm.Components),
-		pq.Array(qm.Channels),
+		pq.Array(channelNames(qm.Channels)),
 		pq.Array(qm.Sources),
 		queryFrom,
 		queryTo,

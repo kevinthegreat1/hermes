@@ -53,7 +53,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return this.getResource('telemetry/components');
   }
 
-  async getChannels(components: string[]): Promise<string[]> {
+  async getChannels(components: string[]): Promise<Array<{ component: string; name: string }>> {
     return this.getResource('telemetry/channels', { components });
   }
 

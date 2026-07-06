@@ -20,6 +20,22 @@ function toOptions(values: string[]): Array<ComboboxOption<string>> {
   return values.map((v) => ({ label: v, value: v }));
 }
 
+function toChannelOptions(entries: Array<{ component: string; name: string }>): Array<ComboboxOption<string>> {
+  const nameCounts = new Map<string, number>();
+  for (const e of entries) {
+    nameCounts.set(e.name, (nameCounts.get(e.name) ?? 0) + 1);
+  }
+  return entries.map((e) => ({
+    label: (nameCounts.get(e.name) ?? 0) > 1 ? `${e.name} (${e.component})` : e.name,
+    value: `${e.component}:${e.name}`,
+  }));
+}
+
+function channelName(composite: string): string {
+  const idx = composite.indexOf(':');
+  return idx === -1 ? composite : composite.substring(idx + 1);
+}
+
 export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) {
   const queryType = query.queryType ?? 'telemetry';
 
@@ -143,8 +159,8 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       setChannelLoading(true);
       datasource
         .getChannels(query.components)
-        .then((values) => {
-          const options = toOptions(values)
+        .then((entries) => {
+          const options = toChannelOptions(entries);
           setChannelOptions(options);
 
           // Auto select if there is only one channel
@@ -167,8 +183,9 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     }
     const loadKeys = async () => {
       setKeyLoading(true);
+      const channels = query.channels.map(channelName);
       datasource
-        .getKeys(query.components, query.channels)
+        .getKeys(query.components, channels)
         .then((values) => setKeyOptions(toOptions(values)))
         .catch(() => setKeyOptions([]))
         .finally(() => setKeyLoading(false));

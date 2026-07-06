@@ -21,7 +21,7 @@ beforeAll(() => {
 function mockDatasource(overrides?: Partial<DataSource>): DataSource {
   return {
     getComponents: jest.fn().mockResolvedValue(['CDH', 'Sensors', 'Power']),
-    getChannels: jest.fn().mockResolvedValue(['Temperature', 'Voltage']),
+    getChannels: jest.fn().mockResolvedValue([{ component: 'CDH', name: 'Temperature' }, { component: 'Sensors', name: 'Voltage' }]),
     getSources: jest.fn().mockResolvedValue(['fsw-1', 'fsw-2']),
     getKeys: jest.fn().mockResolvedValue(['value', 'value.x', 'value.y']),
     getEventSources: jest.fn().mockResolvedValue(['fsw-1', 'fsw-2']),
@@ -33,7 +33,7 @@ function buildProps(
   overrides?: Partial<QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>>
 ): QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions> {
   return {
-    query: { refId: 'A', queryType: 'telemetry' } as MyQuery,
+    query: { refId: 'A', queryType: 'telemetry', components: [], channels: [], sources: [], keys: [] } as MyQuery,
     onChange: jest.fn(),
     onRunQuery: jest.fn(),
     datasource: mockDatasource(),
@@ -60,7 +60,7 @@ describe('QueryEditor — Telemetry', () => {
       <QueryEditor
         {...buildProps({
           datasource: ds,
-          query: { refId: 'A', queryType: 'telemetry', component: 'CDH', channel: 'Attitude' } as MyQuery,
+          query: { refId: 'A', queryType: 'telemetry', components: ['CDH'], channels: ['CDH:Attitude'], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
@@ -78,7 +78,7 @@ describe('QueryEditor — Telemetry', () => {
       <QueryEditor
         {...buildProps({
           datasource: ds,
-          query: { refId: 'A', queryType: 'telemetry', component: 'CDH', channel: 'Temperature' } as MyQuery,
+          query: { refId: 'A', queryType: 'telemetry', components: ['CDH'], channels: ['CDH:Temperature'], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
@@ -114,13 +114,13 @@ describe('QueryEditor — Telemetry', () => {
       <QueryEditor
         {...buildProps({
           datasource: ds,
-          query: { refId: 'A', queryType: 'telemetry', component: 'CDH' } as MyQuery,
+          query: { refId: 'A', queryType: 'telemetry', components: ['CDH'], channels: [], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
 
     await waitFor(() => {
-      expect(ds.getChannels).toHaveBeenCalledWith('CDH');
+      expect(ds.getChannels).toHaveBeenCalledWith(['CDH']);
     });
   });
 
@@ -141,13 +141,13 @@ describe('QueryEditor — Telemetry', () => {
       <QueryEditor
         {...buildProps({
           datasource: ds,
-          query: { refId: 'A', queryType: 'telemetry', component: 'CDH', channel: 'Temperature' } as MyQuery,
+          query: { refId: 'A', queryType: 'telemetry', components: ['CDH'], channels: ['CDH:Temperature'], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
 
     await waitFor(() => {
-      expect(ds.getKeys).toHaveBeenCalledWith('CDH', 'Temperature');
+      expect(ds.getKeys).toHaveBeenCalledWith(['CDH'], ['Temperature']);
     });
   });
 
@@ -157,7 +157,7 @@ describe('QueryEditor — Telemetry', () => {
       <QueryEditor
         {...buildProps({
           datasource: ds,
-          query: { refId: 'A', queryType: 'telemetry', component: 'CDH' } as MyQuery,
+          query: { refId: 'A', queryType: 'telemetry', components: ['CDH'], channels: [], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
@@ -180,21 +180,21 @@ describe('QueryEditor — Telemetry', () => {
           query: {
             refId: 'A',
             queryType: 'telemetry',
-            component: 'CDH',
-            channel: 'Attitude',
-            source: 'fsw-1',
-            key: 'value.x',
+            components: ['CDH'],
+            channels: ['CDH:Attitude'],
+            sources: ['fsw-1'],
+            keys: ['value.x'],
           } as MyQuery,
         })}
       />
     );
 
-    expect(screen.getByDisplayValue('CDH')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Attitude')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('fsw-1')).toBeInTheDocument();
+    expect(screen.getByText('CDH')).toBeInTheDocument();
+    expect(screen.getByText('CDH:Attitude')).toBeInTheDocument();
+    expect(screen.getByText('fsw-1')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('value.x')).toBeInTheDocument();
+      expect(screen.getByText('value.x')).toBeInTheDocument();
     });
   });
 
@@ -241,7 +241,7 @@ describe('QueryEditor — Events', () => {
     render(
       <QueryEditor
         {...buildProps({
-          query: { refId: 'A', queryType: 'events' } as MyQuery,
+          query: { refId: 'A', queryType: 'events', components: [], channels: [], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
@@ -256,7 +256,7 @@ describe('QueryEditor — Events', () => {
     render(
       <QueryEditor
         {...buildProps({
-          query: { refId: 'A', queryType: 'events' } as MyQuery,
+          query: { refId: 'A', queryType: 'events', components: [], channels: [], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
@@ -270,7 +270,7 @@ describe('QueryEditor — Events', () => {
       <QueryEditor
         {...buildProps({
           datasource: ds,
-          query: { refId: 'A', queryType: 'events' } as MyQuery,
+          query: { refId: 'A', queryType: 'events', components: [], channels: [], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
@@ -286,7 +286,7 @@ describe('QueryEditor — Events', () => {
       <QueryEditor
         {...buildProps({
           datasource: ds,
-          query: { refId: 'A', queryType: 'events' } as MyQuery,
+          query: { refId: 'A', queryType: 'events', components: [], channels: [], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
@@ -308,13 +308,16 @@ describe('QueryEditor — Events', () => {
           query: {
             refId: 'A',
             queryType: 'events',
-            source: 'fsw-1',
+            components: [],
+            channels: [],
+            sources: ['fsw-1'],
+            keys: [],
           } as MyQuery,
         })}
       />
     );
 
-    expect(screen.getByDisplayValue('fsw-1')).toBeInTheDocument();
+    expect(screen.getByText('fsw-1')).toBeInTheDocument();
   });
 
   it('handles event source fetch errors gracefully', async () => {
@@ -325,7 +328,7 @@ describe('QueryEditor — Events', () => {
       <QueryEditor
         {...buildProps({
           datasource: ds,
-          query: { refId: 'A', queryType: 'events' } as MyQuery,
+          query: { refId: 'A', queryType: 'events', components: [], channels: [], sources: [], keys: [] } as MyQuery,
         })}
       />
     );
@@ -335,5 +338,123 @@ describe('QueryEditor — Events', () => {
     });
 
     expect(screen.getByRole('combobox', { name: /Source/ })).toBeInTheDocument();
+  });
+});
+
+describe('QueryEditor — Multi-select', () => {
+  it('renders multiple selected components', async () => {
+    const ds = mockDatasource();
+    render(
+      <QueryEditor
+        {...buildProps({
+          datasource: ds,
+          query: {
+            refId: 'A',
+            queryType: 'telemetry',
+            components: ['CDH', 'Sensors'],
+            channels: [],
+            sources: [],
+            keys: [],
+          } as MyQuery,
+        })}
+      />
+    );
+
+    // MultiCombobox in jsdom may only render visible pills
+    expect(screen.getByText('CDH')).toBeInTheDocument();
+  });
+
+  it('renders multiple selected channels', async () => {
+    const ds = mockDatasource({
+      getKeys: jest.fn().mockResolvedValue(['value']),
+    });
+    render(
+      <QueryEditor
+        {...buildProps({
+          datasource: ds,
+          query: {
+            refId: 'A',
+            queryType: 'telemetry',
+            components: ['CDH'],
+            channels: ['CDH:Temperature', 'CDH:Voltage'],
+            sources: [],
+            keys: [],
+          } as MyQuery,
+        })}
+      />
+    );
+
+    // MultiCombobox in jsdom may only render visible pills
+    expect(screen.getByText('CDH:Temperature')).toBeInTheDocument();
+  });
+
+  it('renders multiple selected sources', async () => {
+    const ds = mockDatasource();
+    render(
+      <QueryEditor
+        {...buildProps({
+          datasource: ds,
+          query: {
+            refId: 'A',
+            queryType: 'telemetry',
+            components: ['CDH'],
+            channels: ['CDH:Temperature'],
+            sources: ['fsw-1', 'fsw-2'],
+            keys: [],
+          } as MyQuery,
+        })}
+      />
+    );
+
+    // MultiCombobox in jsdom may only render visible pills
+    expect(screen.getByText('fsw-1')).toBeInTheDocument();
+  });
+});
+
+describe('QueryEditor — Time field toggle', () => {
+  it('renders TIME/ERT radio buttons for telemetry', () => {
+    render(<QueryEditor {...buildProps()} />);
+
+    expect(screen.getByRole('radio', { name: /TIME/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /ERT/ })).toBeInTheDocument();
+  });
+
+  it('defaults to TIME when timeField is not set', () => {
+    render(<QueryEditor {...buildProps()} />);
+
+    expect(screen.getByRole('radio', { name: /TIME/ })).toBeChecked();
+  });
+
+  it('selects ERT when timeField is ert', () => {
+    render(
+      <QueryEditor
+        {...buildProps({
+          query: {
+            refId: 'A',
+            queryType: 'telemetry',
+            components: [],
+            channels: [],
+            sources: [],
+            keys: [],
+            timeField: 'ert',
+          } as MyQuery,
+        })}
+      />
+    );
+
+    expect(screen.getByRole('radio', { name: /ERT/ })).toBeChecked();
+  });
+
+  it('renders TIME/ERT radio buttons for events', () => {
+    render(
+      <QueryEditor
+        {...buildProps({
+          query: { refId: 'A', queryType: 'events', components: [], channels: [], sources: [], keys: [] } as MyQuery,
+        })}
+      />
+    );
+
+    expect(screen.getByRole('radio', { name: /TIME/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /ERT/ })).toBeInTheDocument();
   });
 });
