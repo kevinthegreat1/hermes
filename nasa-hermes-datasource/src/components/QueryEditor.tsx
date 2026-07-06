@@ -75,12 +75,12 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     }
   };
 
-  const onComponentChange = (options: ComboboxOption<string>[]) => {
+  const onComponentChange = (options: Array<ComboboxOption<string>>) => {
     onChange({ ...query, components: options.map(({ value }) => value), channels: [], keys: [], sources: [] });
     onRunQuery();
   };
 
-  const onChannelChange = (options: ComboboxOption<string>[]) => {
+  const onChannelChange = (options: Array<ComboboxOption<string>>) => {
     const updated: MyQuery = { ...query, channels: options.map(({ value }) => value), keys: [], sources: [] };
     onChange(updated);
     if (updated.components && updated.channels && updated.components.length && updated.channels.length) {
@@ -88,7 +88,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     }
   };
 
-  const onSourceChange = (options: ComboboxOption<string>[]) => {
+  const onSourceChange = (options: Array<ComboboxOption<string>>) => {
     const updated: MyQuery = { ...query, sources: options.map(({ value }) => value) };
     onChange(updated);
     if (queryType === 'telemetry' && updated.components && updated.channels && updated.components.length && updated.channels.length) {
@@ -99,7 +99,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     }
   };
 
-  const onKeyChange = (options: ComboboxOption<string>[]) => {
+  const onKeyChange = (options: Array<ComboboxOption<string>>) => {
     const updated: MyQuery = { ...query, keys: options.map(({ value }) => value) };
     onChange(updated);
     if (updated.components && updated.channels && updated.components.length && updated.channels.length) {
