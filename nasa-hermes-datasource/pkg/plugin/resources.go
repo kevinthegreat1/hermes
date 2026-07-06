@@ -3,6 +3,8 @@ package plugin
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/lib/pq"
 )
 
 func (d *Datasource) handleGetTelemetryComponents(w http.ResponseWriter, r *http.Request) {
@@ -26,13 +28,13 @@ func (d *Datasource) handleGetTelemetryComponents(w http.ResponseWriter, r *http
 }
 
 func (d *Datasource) handleGetTelemetryChannels(w http.ResponseWriter, r *http.Request) {
-	component := r.URL.Query().Get("component")
-	if component == "" {
+	components := r.URL.Query()["components"]
+	if len(components) == 0 {
 		writeJSONResponse(w, []string{})
 		return
 	}
 
-	rows, err := d.db.QueryContext(r.Context(), "SELECT name FROM telemetryDefs WHERE component = $1 ORDER BY name;", component)
+	rows, err := d.db.QueryContext(r.Context(), "SELECT name FROM telemetryDefs WHERE component = ANY($1) ORDER BY name;", pq.Array(components))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -72,9 +74,9 @@ func (d *Datasource) handleGetTelemetrySources(w http.ResponseWriter, r *http.Re
 }
 
 func (d *Datasource) handleGetTelemetryKeys(w http.ResponseWriter, r *http.Request) {
-	component := r.URL.Query().Get("component")
-	channel := r.URL.Query().Get("channel")
-	if component == "" || channel == "" {
+	components := r.URL.Query()["components"]
+	channels := r.URL.Query()["channels"]
+	if len(components) == 0 || len(channels) == 0 {
 		writeJSONResponse(w, []string{})
 		return
 	}
@@ -83,10 +85,10 @@ func (d *Datasource) handleGetTelemetryKeys(w http.ResponseWriter, r *http.Reque
 		SELECT DISTINCT t.key 
 		FROM telemetry t
 		JOIN telemetryDefs d ON t.telemetryDefId = d.id
-		WHERE d.component = $1 AND d.name = $2 AND t.key IS NOT NULL
+		WHERE d.component = ANY($1) AND d.name = ANY($2) AND t.key IS NOT NULL
 		LIMIT 200;`
 
-	rows, err := d.db.QueryContext(r.Context(), query, component, channel)
+	rows, err := d.db.QueryContext(r.Context(), query, pq.Array(components), pq.Array(channels))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

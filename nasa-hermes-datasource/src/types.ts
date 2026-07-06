@@ -6,16 +6,16 @@ export type TimeField = 'time' | 'ert';
 
 export interface MyQuery extends DataQuery {
   queryType: QueryType;
-  component?: string;
-  channel?: string;
-  source?: string;
-  key?: string;
+  components: string[];
+  channels: string[];
+  sources: string[];
+  keys: string[];
   timeField?: TimeField;
   timeOverrideFrom?: string;
   timeOverrideTo?: string;
 }
 
-export const DEFAULT_QUERY: Partial<MyQuery> = { queryType: 'telemetry', timeField: 'time' };
+export const DEFAULT_QUERY: Partial<MyQuery> = { queryType: 'telemetry', components: [], channels: [], sources: [], keys: [], timeField: 'time' };
 
 export interface DataPoint {
   Time: number;

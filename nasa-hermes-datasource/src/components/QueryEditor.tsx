@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CollapsableSection, Combobox, ComboboxOption, DateTimePicker, InlineField, RadioButtonGroup } from '@grafana/ui';
+import { CollapsableSection, ComboboxOption, DateTimePicker, InlineField, MultiCombobox, RadioButtonGroup } from '@grafana/ui';
 import { dateTime, DateTime, QueryEditorProps, SelectableValue } from '@grafana/data';
 import { DataSource } from '../datasource';
 import { MyDataSourceOptions, MyQuery, QueryType, TimeField } from '../types';
@@ -41,13 +41,13 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   // --- Handlers ---
 
   const onQueryTypeChange = (value: QueryType) => {
-    const updated = {
+    const updated: MyQuery = {
       ...query,
       queryType: value,
-      component: undefined,
-      channel: undefined,
-      key: undefined,
-      source: undefined,
+      components: [],
+      channels: [],
+      keys: [],
+      sources: [],
     };
     onChange(updated);
     if (value === 'events') {
@@ -55,23 +55,23 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     }
   };
 
-  const onComponentChange = (option: ComboboxOption<string>) => {
-    onChange({ ...query, component: option.value, channel: undefined, key: undefined });
+  const onComponentChange = (options: ComboboxOption<string>[]) => {
+    onChange({ ...query, components: options.map(({ value }) => value), channels: [], keys: [], sources: [] });
     onRunQuery();
   };
 
-  const onChannelChange = (option: ComboboxOption<string>) => {
-    const updated = { ...query, channel: option.value, key: undefined };
+  const onChannelChange = (options: ComboboxOption<string>[]) => {
+    const updated: MyQuery = { ...query, channels: options.map(({ value }) => value), keys: [], sources: [] };
     onChange(updated);
-    if (updated.component && updated.channel) {
+    if (updated.components && updated.channels && updated.components.length && updated.channels.length) {
       onRunQuery();
     }
   };
 
-  const onSourceChange = (option: ComboboxOption<string> | null) => {
-    const updated = { ...query, source: option?.value ?? undefined };
+  const onSourceChange = (options: ComboboxOption<string>[]) => {
+    const updated: MyQuery = { ...query, sources: options.map(({ value }) => value) };
     onChange(updated);
-    if (queryType === 'telemetry' && updated.component && updated.channel) {
+    if (queryType === 'telemetry' && updated.components && updated.channels && updated.components.length && updated.channels.length) {
       onRunQuery();
     }
     if (queryType === 'events') {
@@ -79,10 +79,10 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     }
   };
 
-  const onKeyChange = (option: ComboboxOption<string> | null) => {
-    const updated = { ...query, key: option?.value ?? undefined };
+  const onKeyChange = (options: ComboboxOption<string>[]) => {
+    const updated: MyQuery = { ...query, keys: options.map(({ value }) => value) };
     onChange(updated);
-    if (updated.component && updated.channel) {
+    if (updated.components && updated.channels && updated.components.length && updated.channels.length) {
       onRunQuery();
     }
   };
@@ -135,21 +135,21 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   }, [datasource, queryType]);
 
   useEffect(() => {
-    if (queryType !== 'telemetry' || !query.component) {
+    if (queryType !== 'telemetry' || !query.components || !query.components.length) {
       setTimeout(() => setChannelOptions([]), 0);
       return;
     }
     const loadChannels = async () => {
       setChannelLoading(true);
       datasource
-        .getChannels(query.component ?? "")
+        .getChannels(query.components)
         .then((values) => {
           const options = toOptions(values)
           setChannelOptions(options);
 
           // Auto select if there is only one channel
           if (options.length === 1) {
-            onChannelChange(options[0]);
+            onChannelChange(options);
           }
         })
         .catch(() => setChannelOptions([]))
@@ -158,23 +158,23 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     loadChannels();
     // We do not need onChannelChange in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasource, queryType, query.component]);
+  }, [datasource, queryType, query.components]);
 
   useEffect(() => {
-    if (queryType !== 'telemetry' || !query.component || !query.channel) {
+    if (queryType !== 'telemetry' || !query.components || !query.channels || !query.components.length || !query.channels.length) {
       setTimeout(() => setKeyOptions([]), 0);
       return;
     }
     const loadKeys = async () => {
       setKeyLoading(true);
       datasource
-        .getKeys(query.component ?? "", query.channel ?? "")
+        .getKeys(query.components, query.channels)
         .then((values) => setKeyOptions(toOptions(values)))
         .catch(() => setKeyOptions([]))
         .finally(() => setKeyLoading(false));
     }
     loadKeys();
-  }, [datasource, queryType, query.component, query.channel]);
+  }, [datasource, queryType, query.components, query.channels]);
 
   // --- Event data loading ---
 
@@ -209,10 +209,10 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       {queryType === 'telemetry' && (
         <>
           <InlineField label="Component" labelWidth={16} tooltip="FSW component or module" required>
-            <Combobox
+            <MultiCombobox
               id="query-editor-component"
               options={componentOptions}
-              value={query.component ?? null}
+              value={query.components}
               onChange={onComponentChange}
               loading={componentLoading}
               placeholder="Select component"
@@ -220,23 +220,23 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
             />
           </InlineField>
           <InlineField label="Channel" labelWidth={16} tooltip="Telemetry channel name" required>
-            <Combobox
-              key={`channel-${query.component ?? ''}`}
+            <MultiCombobox
+              key={`channel-${query.components?.join(',')}`}
               id="query-editor-channel"
               options={channelOptions}
-              value={query.channel ?? null}
+              value={query.channels}
               onChange={onChannelChange}
               loading={channelLoading}
-              disabled={!query.component}
-              placeholder={query.component ? 'Select channel' : 'Select a component first'}
+              disabled={!query.components || !query.components.length}
+              placeholder={query.components && query.components.length ? 'Select channel' : 'Select a component first'}
               width={28}
             />
           </InlineField>
           <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
-            <Combobox
+            <MultiCombobox
               id="query-editor-source"
               options={sourceOptions}
-              value={query.source ?? null}
+              value={query.sources}
               onChange={onSourceChange}
               isClearable
               loading={sourceLoading}
@@ -256,10 +256,10 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
           </div>
           {keyOptions.length > 1 && (
             <InlineField label="Key" labelWidth={16} tooltip="Value field path for compound channels">
-              <Combobox
+              <MultiCombobox
                 id="query-editor-key"
                 options={keyOptions}
-                value={query.key ?? null}
+                value={query.keys}
                 onChange={onKeyChange}
                 isClearable
                 loading={keyLoading}
@@ -290,10 +290,10 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       {queryType === 'events' && (
         <>
           <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
-            <Combobox
+            <MultiCombobox
               id="query-editor-event-source"
               options={eventSourceOptions}
-              value={query.source ?? null}
+              value={query.sources}
               onChange={onSourceChange}
               isClearable
               loading={eventSourceLoading}

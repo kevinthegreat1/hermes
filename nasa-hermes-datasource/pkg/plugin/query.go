@@ -9,6 +9,7 @@ import (
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
+	"github.com/lib/pq"
 )
 
 // QueryData handles multiple queries and returns multiple responses.
@@ -32,14 +33,14 @@ func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataReques
 }
 
 type queryModel struct {
-	QueryType        string `json:"queryType"`
-	Component        string `json:"component"`
-	Channel          string `json:"channel"`
-	Source           string `json:"source"`
-	TimeOverrideFrom string `json:"timeOverrideFrom,omitempty"`
-	TimeOverrideTo   string `json:"timeOverrideTo,omitempty"`
-	Key              string `json:"key,omitempty"`
-	TimeField        string `json:"timeField"`
+	QueryType        string   `json:"queryType"`
+	Components       []string `json:"components"`
+	Channels         []string `json:"channels"`
+	Sources          []string `json:"sources"`
+	TimeOverrideFrom string   `json:"timeOverrideFrom,omitempty"`
+	TimeOverrideTo   string   `json:"timeOverrideTo,omitempty"`
+	Keys             []string `json:"keys,omitempty"`
+	TimeField        string   `json:"timeField"`
 }
 
 func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
@@ -104,7 +105,7 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 	var response backend.DataResponse
 
 	queryArgs := []interface{}{
-		qm.Source,
+		pq.Array(qm.Sources),
 		queryFrom,
 		queryTo,
 	}
@@ -120,7 +121,7 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 			e.args::text AS arguments
 		FROM eventDefs d
 		JOIN events e ON e.eventDefId = d.id
-		WHERE ($1 = '' OR e.source = $1)
+		WHERE ($1::text[] = '{}' OR e.source = ANY($1))
 		  AND e.%s >= $2
 		  AND e.%s <= $3
 		ORDER BY e.%s ASC;`, timeColumn, timeColumn, timeColumn, timeColumn)
@@ -161,13 +162,17 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 
 func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time, timeColumn string, queryInterval time.Duration) backend.DataResponse {
 	var response backend.DataResponse
-	if qm.Component == "" || qm.Channel == "" {
+	if len(qm.Components) == 0 || len(qm.Channels) == 0 {
 		return response
 	}
 
-	sqlKeyParam := qm.Key
-	if qm.Key != "" {
-		sqlKeyParam = qm.Key + "%"
+	sqlKeyParam := pq.Array(qm.Keys)
+	if len(qm.Keys) > 0 {
+		keyPatterns := make([]string, len(qm.Keys))
+		for i, key := range qm.Keys {
+			keyPatterns[i] = key + "%"
+		}
+		sqlKeyParam = pq.Array(keyPatterns)
 	}
 
 	// Set time grouping interval
@@ -177,9 +182,9 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 	}
 
 	queryArgs := []interface{}{
-		qm.Component,
-		qm.Channel,
-		qm.Source,
+		pq.Array(qm.Components),
+		pq.Array(qm.Channels),
+		pq.Array(qm.Sources),
 		queryFrom,
 		queryTo,
 		sqlKeyParam,
@@ -188,8 +193,11 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 
 	// TODO: also consider having valueType in telemetryDefs instead of telemetry
 	rawSQL := fmt.Sprintf(`
-		SELECT 
+		SELECT
 			time_bucket($7::interval, t.%s) AS time_bucket,
+			d.component,
+			d.name,
+			t.source,
 			t.valueType,
 			t.key,
 			AVG(t.integral::double precision) AS val_int,
@@ -198,12 +206,12 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 			MAX(t.string) AS val_str 
 		FROM telemetryDefs d
 		JOIN telemetry t ON t.telemetryDefId = d.id
-		WHERE d.component = $1
-		  AND d.name = $2
-		  AND ($3 = '' OR t.source = $3)
+		WHERE d.component = ANY($1)
+		  AND d.name = ANY($2)
+		  AND ($3::text[] = '{}' OR t.source = ANY($3))
 		  AND t.%s >= $4 AND t.%s <= $5
-		  AND ($6 = '' OR t.key LIKE $6)
-		GROUP BY time_bucket, t.valueType, t.key
+		  AND ($6::text[] = '{}' OR t.key LIKE ANY($6))
+		GROUP BY time_bucket, d.component, d.name, t.source, t.valueType, t.key
 		ORDER BY time_bucket ASC;`, timeColumn, timeColumn, timeColumn)
 
 	// Execute the query
@@ -221,15 +229,15 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 
 	for rows.Next() {
 		var t time.Time
-		var dbValueType string
+		var component, channel, source, dbValueType string
 		var key string
 		var vInt, vFloat, vBool sql.NullFloat64
 		var vStr sql.NullString
-		if err := rows.Scan(&t, &dbValueType, &key, &vInt, &vFloat, &vBool, &vStr); err != nil {
+		if err := rows.Scan(&t, &component, &channel, &source, &dbValueType, &key, &vInt, &vFloat, &vBool, &vStr); err != nil {
 			return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("telemetry row scan failure: %v", err.Error()))
 		}
 
-		frameId := fmt.Sprintf("%s.%s.%s/%s", qm.Component, qm.Channel, key, qm.TimeField)
+		frameId := fmt.Sprintf("%s.%s.%s/%s", component, channel, key, qm.TimeField)
 		frame, exists := frames[frameId]
 
 		// Create new frame
@@ -247,8 +255,8 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 				valueField = data.NewField(frameId, nil, []*string{})
 			}
 			valueField.Labels = map[string]string{
-				"component": qm.Component,
-				"channel":   qm.Channel,
+				"component": component,
+				"channel":   channel,
 				"key":       key,
 				"timeField": qm.TimeField,
 			}
