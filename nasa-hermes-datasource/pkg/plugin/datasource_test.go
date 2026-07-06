@@ -10,6 +10,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/nasa/hermes-datasource/pkg/models"
 )
 
 func TestQueryData(t *testing.T) {
@@ -483,22 +484,10 @@ func TestQueryTelemetryWithMock(t *testing.T) {
 }
 
 func TestCheckHealth(t *testing.T) {
-	ds := Datasource{}
-
 	t.Run("returns error when host is missing", func(t *testing.T) {
-		jsonData, _ := json.Marshal(map[string]any{
-			"host":     "",
-			"database": "hermes",
-		})
+		ds := Datasource{config: &models.PluginSettings{Host: "", Database: "hermes"}}
 
-		res, err := ds.CheckHealth(context.Background(), &backend.CheckHealthRequest{
-			PluginContext: backend.PluginContext{
-				DataSourceInstanceSettings: &backend.DataSourceInstanceSettings{
-					JSONData:                jsonData,
-					DecryptedSecureJSONData: map[string]string{},
-				},
-			},
-		})
+		res, err := ds.CheckHealth(context.Background(), &backend.CheckHealthRequest{})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -512,19 +501,9 @@ func TestCheckHealth(t *testing.T) {
 	})
 
 	t.Run("returns error when database is missing", func(t *testing.T) {
-		jsonData, _ := json.Marshal(map[string]any{
-			"host":     "localhost:5432",
-			"database": "",
-		})
+		ds := Datasource{config: &models.PluginSettings{Host: "localhost:5432", Database: ""}}
 
-		res, err := ds.CheckHealth(context.Background(), &backend.CheckHealthRequest{
-			PluginContext: backend.PluginContext{
-				DataSourceInstanceSettings: &backend.DataSourceInstanceSettings{
-					JSONData:                jsonData,
-					DecryptedSecureJSONData: map[string]string{},
-				},
-			},
-		})
+		res, err := ds.CheckHealth(context.Background(), &backend.CheckHealthRequest{})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -538,19 +517,9 @@ func TestCheckHealth(t *testing.T) {
 	})
 
 	t.Run("returns error when db is nil", func(t *testing.T) {
-		jsonData, _ := json.Marshal(map[string]any{
-			"host":     "localhost:5432",
-			"database": "hermes",
-		})
+		ds := Datasource{config: &models.PluginSettings{Host: "localhost:5432", Database: "hermes"}}
 
-		res, err := ds.CheckHealth(context.Background(), &backend.CheckHealthRequest{
-			PluginContext: backend.PluginContext{
-				DataSourceInstanceSettings: &backend.DataSourceInstanceSettings{
-					JSONData:                jsonData,
-					DecryptedSecureJSONData: map[string]string{},
-				},
-			},
-		})
+		res, err := ds.CheckHealth(context.Background(), &backend.CheckHealthRequest{})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

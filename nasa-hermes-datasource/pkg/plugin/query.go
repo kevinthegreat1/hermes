@@ -156,6 +156,9 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 
 		frame.AppendRow(t, component, name, severityLabel(severity), message, source, args)
 	}
+	if err := rows.Err(); err != nil {
+		return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("events row iteration error: %v", err.Error()))
+	}
 
 	response.Frames = append(response.Frames, frame)
 	return response
@@ -308,6 +311,10 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 			}
 			frame.AppendRow(t, valPtr)
 		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("telemetry row iteration error: %v", err.Error()))
 	}
 
 	// Return all data frames

@@ -52,7 +52,8 @@ func NewDatasource(_ context.Context, settings backend.DataSourceInstanceSetting
 	}
 
 	ds := &Datasource{
-		db: db,
+		db:     db,
+		config: config,
 	}
 
 	mux := http.NewServeMux()
@@ -69,7 +70,8 @@ func NewDatasource(_ context.Context, settings backend.DataSourceInstanceSetting
 // Datasource is an example datasource which can respond to data queries, reports
 // its health and has streaming skills.
 type Datasource struct {
-	db *sql.DB
+	db     *sql.DB
+	config *models.PluginSettings
 	backend.CallResourceHandler
 }
 
@@ -77,42 +79,36 @@ type Datasource struct {
 // created. As soon as datasource settings change detected by SDK old datasource instance will
 // be disposed and a new one will be created using NewSampleDatasource factory function.
 func (d *Datasource) Dispose() {
-	// Clean up datasource instance resources.
+	if d.db != nil {
+		_ = d.db.Close()
+	}
 }
 
 // CheckHealth handles health checks sent from Grafana to the plugin.
 // The main use case for these health checks is the test button on the
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
-func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+func (d *Datasource) CheckHealth(ctx context.Context, _ *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	res := &backend.CheckHealthResult{}
-	config, err := models.LoadPluginSettings(*req.PluginContext.DataSourceInstanceSettings)
 
-	// Check config
-	if err != nil {
-		res.Status = backend.HealthStatusError
-		res.Message = "Unable to load settings"
-		return res, nil
-	}
-	if config.Host == "" {
+	if d.config.Host == "" {
 		res.Status = backend.HealthStatusError
 		res.Message = "Host configuration parameter is missing"
 		return res, nil
 	}
-	if config.Database == "" {
+	if d.config.Database == "" {
 		res.Status = backend.HealthStatusError
 		res.Message = "Database configuration parameter is missing"
 		return res, nil
 	}
 
-	// Check connectivity
 	if d.db == nil {
 		res.Status = backend.HealthStatusError
 		res.Message = "Internal database connection is null"
 		return res, nil
 	}
 
-	err = d.db.PingContext(ctx)
+	err := d.db.PingContext(ctx)
 	if err != nil {
 		res.Status = backend.HealthStatusError
 		res.Message = fmt.Sprintf("TimescaleDB ping refused: %s", err.Error())
@@ -121,6 +117,6 @@ func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRe
 
 	return &backend.CheckHealthResult{
 		Status:  backend.HealthStatusOk,
-		Message: fmt.Sprintf("Successfully connected to database '%s' at '%s'", config.Database, config.Host),
+		Message: fmt.Sprintf("Successfully connected to database '%s' at '%s'", d.config.Database, d.config.Host),
 	}, nil
 }

@@ -1,11 +1,31 @@
 package plugin
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 
 	"github.com/lib/pq"
 )
+
+func scanStrings(rows *sql.Rows) ([]string, error) {
+	defer func() { _ = rows.Close() }()
+	var items []string
+	for rows.Next() {
+		var item string
+		if err := rows.Scan(&item); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []string{}
+	}
+	return items, nil
+}
 
 func (d *Datasource) handleGetTelemetryComponents(w http.ResponseWriter, r *http.Request) {
 	rows, err := d.db.QueryContext(r.Context(), "SELECT DISTINCT component FROM telemetryDefs ORDER BY component;")
@@ -13,16 +33,10 @@ func (d *Datasource) handleGetTelemetryComponents(w http.ResponseWriter, r *http
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer func() { _ = rows.Close() }()
-
-	items := []string{}
-	for rows.Next() {
-		var item string
-		if err := rows.Scan(&item); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		items = append(items, item)
+	items, err := scanStrings(rows)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	writeJSONResponse(w, items)
 }
@@ -55,6 +69,10 @@ func (d *Datasource) handleGetTelemetryChannels(w http.ResponseWriter, r *http.R
 		}
 		items = append(items, entry)
 	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	writeJSONResponse(w, items)
 }
 
@@ -64,16 +82,10 @@ func (d *Datasource) handleGetTelemetrySources(w http.ResponseWriter, r *http.Re
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer func() { _ = rows.Close() }()
-
-	items := []string{}
-	for rows.Next() {
-		var item string
-		if err := rows.Scan(&item); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		items = append(items, item)
+	items, err := scanStrings(rows)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	writeJSONResponse(w, items)
 }
@@ -98,16 +110,10 @@ func (d *Datasource) handleGetTelemetryKeys(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer func() { _ = rows.Close() }()
-
-	items := []string{}
-	for rows.Next() {
-		var item string
-		if err := rows.Scan(&item); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		items = append(items, item)
+	items, err := scanStrings(rows)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	writeJSONResponse(w, items)
 }
@@ -118,16 +124,10 @@ func (d *Datasource) handleGetEventSources(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer func() { _ = rows.Close() }()
-
-	items := []string{}
-	for rows.Next() {
-		var item string
-		if err := rows.Scan(&item); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		items = append(items, item)
+	items, err := scanStrings(rows)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	writeJSONResponse(w, items)
 }
