@@ -17,15 +17,6 @@ export interface MyQuery extends DataQuery {
 
 export const DEFAULT_QUERY: Partial<MyQuery> = { queryType: 'telemetry', components: [], channels: [], sources: [], keys: [], timeField: 'time' };
 
-export interface DataPoint {
-  Time: number;
-  Value: number;
-}
-
-export interface DataSourceResponse {
-  datapoints: DataPoint[];
-}
-
 /**
  * These are options configured for each DataSource instance
  */

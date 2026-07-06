@@ -265,16 +265,6 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
               width={28}
             />
           </InlineField>
-          <div style={{ marginTop: 8, marginBottom: 8 }}>
-            <RadioButtonGroup
-              id="query-editor-time-field"
-              options={TIME_FIELD_OPTIONS}
-              value={query.timeField ?? 'time'}
-              onChange={onTimeFieldChange}
-              size="sm"
-              fullWidth={false}
-            />
-          </div>
           {keyOptions.length > 1 && (
             <InlineField label="Key" labelWidth={16} tooltip="Value field path for compound channels">
               <MultiCombobox
@@ -289,22 +279,6 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
               />
             </InlineField>
           )}
-          <CollapsableSection label="Time override" isOpen={false}>
-            <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
-              <DateTimePicker
-                date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
-                onChange={onTimeOverrideFromChange}
-                clearable
-              />
-            </InlineField>
-            <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
-              <DateTimePicker
-                date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
-                onChange={onTimeOverrideToChange}
-                clearable
-              />
-            </InlineField>
-          </CollapsableSection>
         </>
       )}
 
@@ -322,34 +296,35 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
               width={28}
             />
           </InlineField>
-          <div style={{ marginTop: 8, marginBottom: 8 }}>
-            <RadioButtonGroup
-              id="query-editor-event-time-field"
-              options={TIME_FIELD_OPTIONS}
-              value={query.timeField ?? 'time'}
-              onChange={onTimeFieldChange}
-              size="sm"
-              fullWidth={false}
-            />
-          </div>
-          <CollapsableSection label="Time override" isOpen={false}>
-            <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
-              <DateTimePicker
-                date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
-                onChange={onTimeOverrideFromChange}
-                clearable
-              />
-            </InlineField>
-            <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
-              <DateTimePicker
-                date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
-                onChange={onTimeOverrideToChange}
-                clearable
-              />
-            </InlineField>
-          </CollapsableSection>
         </>
       )}
+
+      <div style={{ marginTop: 8, marginBottom: 8 }}>
+        <RadioButtonGroup
+          id="query-editor-time-field"
+          options={TIME_FIELD_OPTIONS}
+          value={query.timeField ?? 'time'}
+          onChange={onTimeFieldChange}
+          size="sm"
+          fullWidth={false}
+        />
+      </div>
+      <CollapsableSection label="Time override" isOpen={false}>
+        <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
+          <DateTimePicker
+            date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
+            onChange={onTimeOverrideFromChange}
+            clearable
+          />
+        </InlineField>
+        <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
+          <DateTimePicker
+            date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
+            onChange={onTimeOverrideToChange}
+            clearable
+          />
+        </InlineField>
+      </CollapsableSection>
     </>
   );
 }
