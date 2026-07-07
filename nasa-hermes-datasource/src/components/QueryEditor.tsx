@@ -12,8 +12,8 @@ const QUERY_TYPE_OPTIONS: Array<SelectableValue<QueryType>> = [
 ];
 
 const TIME_FIELD_OPTIONS: Array<SelectableValue<TimeField>> = [
-  { label: 'TIME', value: 'time' },
-  { label: 'ERT', value: 'ert' },
+  { label: 'Receive Time', value: 'ert' },
+  { label: 'On-board Time', value: 'time' },
 ];
 
 function toOptions(values: string[]): Array<ComboboxOption<string>> {
@@ -308,7 +308,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
         <RadioButtonGroup
           id="query-editor-time-field"
           options={TIME_FIELD_OPTIONS}
-          value={query.timeField ?? 'time'}
+          value={query.timeField ?? 'ert'}
           onChange={onTimeFieldChange}
           size="sm"
           fullWidth={false}
