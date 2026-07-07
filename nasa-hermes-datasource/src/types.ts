@@ -4,10 +4,14 @@ import { DataQuery } from '@grafana/schema';
 export type QueryType = 'telemetry' | 'events';
 export type TimeField = 'time' | 'ert';
 
+export interface ChannelRef {
+  component: string;
+  name: string;
+}
+
 export interface MyQuery extends DataQuery {
   queryType: QueryType;
-  components: string[];
-  channels: string[];
+  channels: ChannelRef[];
   sources: string[];
   keys: string[];
   timeField?: TimeField;
@@ -15,7 +19,7 @@ export interface MyQuery extends DataQuery {
   timeOverrideTo?: string;
 }
 
-export const DEFAULT_QUERY: Partial<MyQuery> = { queryType: 'telemetry', components: [], channels: [], sources: [], keys: [], timeField: 'time' };
+export const DEFAULT_QUERY: Partial<MyQuery> = { queryType: 'telemetry', channels: [], sources: [], keys: [], timeField: 'time' };
 
 /**
  * These are options configured for each DataSource instance

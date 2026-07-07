@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -33,15 +32,19 @@ func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataReques
 	return response, nil
 }
 
+type channelRef struct {
+	Component string `json:"component"`
+	Name      string `json:"name"`
+}
+
 type queryModel struct {
-	QueryType        string   `json:"queryType"`
-	Components       []string `json:"components"`
-	Channels         []string `json:"channels"`
-	Sources          []string `json:"sources"`
-	TimeOverrideFrom string   `json:"timeOverrideFrom,omitempty"`
-	TimeOverrideTo   string   `json:"timeOverrideTo,omitempty"`
-	Keys             []string `json:"keys,omitempty"`
-	TimeField        string   `json:"timeField"`
+	QueryType        string       `json:"queryType"`
+	Channels         []channelRef `json:"channels"`
+	Sources          []string     `json:"sources"`
+	TimeOverrideFrom string       `json:"timeOverrideFrom,omitempty"`
+	TimeOverrideTo   string       `json:"timeOverrideTo,omitempty"`
+	Keys             []string     `json:"keys,omitempty"`
+	TimeField        string       `json:"timeField"`
 }
 
 func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
@@ -164,24 +167,22 @@ func (d *Datasource) queryEvents(ctx context.Context, _ backend.PluginContext, q
 	return response
 }
 
-// channelNames extracts the plain channel name from composite "component:name"
-// values. Plain names (without ":") are returned as-is.
-func channelNames(channels []string) []string {
-	names := make([]string, len(channels))
-	for i, ch := range channels {
-		if idx := strings.Index(ch, ":"); idx >= 0 {
-			names[i] = ch[idx+1:]
-		} else {
-			names[i] = ch
-		}
-	}
-	return names
-}
-
 func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext, qm queryModel, queryFrom time.Time, queryTo time.Time, timeColumn string, queryInterval time.Duration) backend.DataResponse {
 	var response backend.DataResponse
-	if len(qm.Components) == 0 || len(qm.Channels) == 0 {
+	if len(qm.Channels) == 0 {
 		return response
+	}
+
+	// Extract unique components and names from structured channels
+	componentSet := make(map[string]struct{})
+	names := make([]string, len(qm.Channels))
+	for i, ch := range qm.Channels {
+		componentSet[ch.Component] = struct{}{}
+		names[i] = ch.Name
+	}
+	components := make([]string, 0, len(componentSet))
+	for c := range componentSet {
+		components = append(components, c)
 	}
 
 	sqlKeyParam := pq.Array(qm.Keys)
@@ -200,8 +201,8 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 	}
 
 	queryArgs := []any{
-		pq.Array(qm.Components),
-		pq.Array(channelNames(qm.Channels)),
+		pq.Array(components),
+		pq.Array(names),
 		pq.Array(qm.Sources),
 		queryFrom,
 		queryTo,

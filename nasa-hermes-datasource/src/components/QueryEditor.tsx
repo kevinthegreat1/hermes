@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CollapsableSection, ComboboxOption, DateTimePicker, InlineField, MultiCombobox, RadioButtonGroup } from '@grafana/ui';
 import { dateTime, DateTime, QueryEditorProps, SelectableValue } from '@grafana/data';
 import { DataSource } from '../datasource';
-import { MyDataSourceOptions, MyQuery, QueryType, TimeField } from '../types';
+import { ChannelRef, MyDataSourceOptions, MyQuery, QueryType, TimeField } from '../types';
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
@@ -20,36 +20,34 @@ function toOptions(values: string[]): Array<ComboboxOption<string>> {
   return values.map((v) => ({ label: v, value: v }));
 }
 
-function toChannelOptions(entries: Array<{ component: string; name: string }>): Array<ComboboxOption<string>> {
-  const nameCounts = new Map<string, number>();
-  for (const e of entries) {
-    nameCounts.set(e.name, (nameCounts.get(e.name) ?? 0) + 1);
-  }
-  return entries.map((e) => {
-    const isDuplicate = (nameCounts.get(e.name) ?? 0) > 1;
-    return {
-      label: isDuplicate ? `${e.name} (${e.component})` : e.name,
-      description: isDuplicate ? e.component : undefined,
-      value: `${e.component}:${e.name}`,
-    };
-  });
+function channelToKey(ch: ChannelRef): string {
+  return JSON.stringify(ch);
 }
 
-function channelName(composite: string): string {
-  const idx = composite.indexOf(':');
-  return idx === -1 ? composite : composite.substring(idx + 1);
+function keyToChannel(key: string): ChannelRef {
+  return JSON.parse(key) as ChannelRef;
+}
+
+function toChannelOptions(entries: ChannelRef[]): Array<ComboboxOption<string>> {
+  return entries.map((e) => ({
+    label: e.name,
+    description: e.component,
+    value: channelToKey(e),
+  }));
+}
+
+function channelValues(channels: ChannelRef[]): string[] {
+  return channels.map(channelToKey);
 }
 
 export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) {
   const queryType = query.queryType ?? 'telemetry';
 
   // Telemetry state
-  const [componentOptions, setComponentOptions] = useState<Array<ComboboxOption<string>>>([]);
   const [channelOptions, setChannelOptions] = useState<Array<ComboboxOption<string>>>([]);
   const [sourceOptions, setSourceOptions] = useState<Array<ComboboxOption<string>>>([]);
   const [keyOptions, setKeyOptions] = useState<Array<ComboboxOption<string>>>([]);
 
-  const [componentLoading, setComponentLoading] = useState(false);
   const [channelLoading, setChannelLoading] = useState(false);
   const [sourceLoading, setSourceLoading] = useState(false);
   const [keyLoading, setKeyLoading] = useState(false);
@@ -64,7 +62,6 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     const updated: MyQuery = {
       ...query,
       queryType: value,
-      components: [],
       channels: [],
       keys: [],
       sources: [],
@@ -75,15 +72,11 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     }
   };
 
-  const onComponentChange = (options: Array<ComboboxOption<string>>) => {
-    onChange({ ...query, components: options.map(({ value }) => value), channels: [], keys: [], sources: [] });
-    onRunQuery();
-  };
-
   const onChannelChange = (options: Array<ComboboxOption<string>>) => {
-    const updated: MyQuery = { ...query, channels: options.map(({ value }) => value), keys: [], sources: [] };
+    const channels = options.map(({ value }) => keyToChannel(value));
+    const updated: MyQuery = { ...query, channels, keys: [], sources: [] };
     onChange(updated);
-    if (updated.components && updated.channels && updated.components.length && updated.channels.length) {
+    if (channels.length) {
       onRunQuery();
     }
   };
@@ -91,7 +84,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   const onSourceChange = (options: Array<ComboboxOption<string>>) => {
     const updated: MyQuery = { ...query, sources: options.map(({ value }) => value) };
     onChange(updated);
-    if (queryType === 'telemetry' && updated.components && updated.channels && updated.components.length && updated.channels.length) {
+    if (queryType === 'telemetry' && updated.channels && updated.channels.length) {
       onRunQuery();
     }
     if (queryType === 'events') {
@@ -102,7 +95,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   const onKeyChange = (options: Array<ComboboxOption<string>>) => {
     const updated: MyQuery = { ...query, keys: options.map(({ value }) => value) };
     onChange(updated);
-    if (updated.components && updated.channels && updated.components.length && updated.channels.length) {
+    if (updated.channels && updated.channels.length) {
       onRunQuery();
     }
   };
@@ -128,15 +121,15 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     if (queryType !== 'telemetry') {
       return;
     }
-    const loadComponents = async () => {
-      setComponentLoading(true);
+    const loadChannels = async () => {
+      setChannelLoading(true);
       datasource
-        .getComponents()
-        .then((values) => setComponentOptions(toOptions(values)))
-        .catch(() => setComponentOptions([]))
-        .finally(() => setComponentLoading(false));
+        .getChannels()
+        .then((entries) => setChannelOptions(toChannelOptions(entries)))
+        .catch(() => setChannelOptions([]))
+        .finally(() => setChannelLoading(false));
     };
-    loadComponents();
+    loadChannels();
   }, [datasource, queryType]);
 
   useEffect(() => {
@@ -155,47 +148,20 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   }, [datasource, queryType]);
 
   useEffect(() => {
-    if (queryType !== 'telemetry' || !query.components || !query.components.length) {
-      setTimeout(() => setChannelOptions([]), 0);
-      return;
-    }
-    const loadChannels = async () => {
-      setChannelLoading(true);
-      datasource
-        .getChannels(query.components)
-        .then((entries) => {
-          const options = toChannelOptions(entries);
-          setChannelOptions(options);
-
-          // Auto select if there is only one channel
-          if (options.length === 1) {
-            onChannelChange(options);
-          }
-        })
-        .catch(() => setChannelOptions([]))
-        .finally(() => setChannelLoading(false));
-    };
-    loadChannels();
-    // We do not need onChannelChange in deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasource, queryType, query.components]);
-
-  useEffect(() => {
-    if (queryType !== 'telemetry' || !query.components || !query.channels || !query.components.length || !query.channels.length) {
+    if (queryType !== 'telemetry' || !query.channels || !query.channels.length) {
       setTimeout(() => setKeyOptions([]), 0);
       return;
     }
     const loadKeys = async () => {
       setKeyLoading(true);
-      const channels = query.channels.map(channelName);
       datasource
-        .getKeys(query.components, channels)
+        .getKeys(query.channels)
         .then((values) => setKeyOptions(toOptions(values)))
         .catch(() => setKeyOptions([]))
         .finally(() => setKeyLoading(false));
     }
     loadKeys();
-  }, [datasource, queryType, query.components, query.channels]);
+  }, [datasource, queryType, query.channels]);
 
   // --- Event data loading ---
 
@@ -229,30 +195,16 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
 
       {queryType === 'telemetry' && (
         <>
-          <InlineField label="Component" labelWidth={16} tooltip="FSW component or module" required>
-            <MultiCombobox
-              id="query-editor-component"
-              data-testid="query-editor-component"
-              options={componentOptions}
-              value={query.components}
-              onChange={onComponentChange}
-              loading={componentLoading}
-              placeholder="Select component"
-              width={28}
-            />
-          </InlineField>
           <InlineField label="Channel" labelWidth={16} tooltip="Telemetry channel name" required>
             <MultiCombobox
-              key={`channel-${query.components?.join(',')}`}
               id="query-editor-channel"
               data-testid="query-editor-channel"
               options={channelOptions}
-              value={query.channels}
+              value={channelValues(query.channels ?? [])}
               onChange={onChannelChange}
               loading={channelLoading}
-              disabled={!query.components || !query.components.length}
-              placeholder={query.components && query.components.length ? 'Select channel' : 'Select a component first'}
-              width={28}
+              placeholder="Select channel"
+              width={56}
             />
           </InlineField>
           <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
@@ -265,7 +217,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
               isClearable
               loading={sourceLoading}
               placeholder="All sources"
-              width={28}
+              width={56}
             />
           </InlineField>
           {keyOptions.length > 1 && (
@@ -279,7 +231,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
                 isClearable
                 loading={keyLoading}
                 placeholder="All keys"
-                width={28}
+                width={56}
               />
             </InlineField>
           )}
@@ -298,7 +250,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
               isClearable
               loading={eventSourceLoading}
               placeholder="All sources"
-              width={28}
+              width={56}
             />
           </InlineField>
         </>

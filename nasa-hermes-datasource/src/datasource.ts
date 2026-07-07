@@ -1,7 +1,7 @@
 import { DataQueryRequest, DataSourceInstanceSettings, CoreApp, ScopedVars } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import { map } from 'rxjs/operators';
-import { MyQuery, MyDataSourceOptions, DEFAULT_QUERY } from './types';
+import { MyQuery, MyDataSourceOptions, DEFAULT_QUERY, ChannelRef } from './types';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -31,8 +31,10 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return {
       ...query,
       queryType: query.queryType ?? 'telemetry',
-      components: query.components.map(c => templateSrv.replace(c, scopedVars)),
-      channels: query.channels.map(c => templateSrv.replace(c, scopedVars)),
+      channels: query.channels.map(ch => ({
+        component: templateSrv.replace(ch.component, scopedVars),
+        name: templateSrv.replace(ch.name, scopedVars),
+      })),
       sources: query.sources.map(s => templateSrv.replace(s, scopedVars)),
       keys: query.keys.map(k => templateSrv.replace(k, scopedVars)),
       timeOverrideFrom: query.timeOverrideFrom,
@@ -45,24 +47,22 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     if (query.queryType === 'events') {
       return true;
     }
-    return !!query.components.length && !!query.channels.length;
+    return !!query.channels.length;
   }
 
   // Telemetry resources
-  async getComponents(): Promise<string[]> {
-    return this.getResource('telemetry/components');
-  }
-
-  async getChannels(components: string[]): Promise<Array<{ component: string; name: string }>> {
-    return this.getResource('telemetry/channels', { components });
+  async getChannels(): Promise<ChannelRef[]> {
+    return this.getResource('telemetry/channels');
   }
 
   async getSources(): Promise<string[]> {
     return this.getResource('telemetry/sources');
   }
 
-  async getKeys(components: string[], channels: string[]): Promise<string[]> {
-    return this.getResource('telemetry/keys', { components, channels });
+  async getKeys(channels: ChannelRef[]): Promise<string[]> {
+    const components = [...new Set(channels.map(ch => ch.component))];
+    const names = channels.map(ch => ch.name);
+    return this.getResource('telemetry/keys', { components, channels: names });
   }
 
   // Event resources
