@@ -27,20 +27,14 @@ func newHermesConn(ctx context.Context, hermesGrpcConnStr string) (*HermesConnec
 		return nil, err
 	}
 
-	hermesConnection := &HermesConnection{
+	h := &HermesConnection{
 		hermesClient: hermesGrpc.NewApiClient(hermesConn),
 		dictHeads:    make(map[string]*pb.DictionaryHead),
 		dicts:        make(map[string]*pb.Dictionary),
 	}
 
-	go hermesConnection.syncDicts(ctx)
-
-	return hermesConnection, nil
-}
-
-func (h *HermesConnection) syncDicts(ctx context.Context) {
 	if dictList, err := h.hermesClient.AllDictionary(ctx, &emptypb.Empty{}); err != nil {
-		return
+		return nil, err
 	} else {
 		h.mu.Lock()
 		h.dictHeads = dictList.All
@@ -52,6 +46,12 @@ func (h *HermesConnection) syncDicts(ctx context.Context) {
 		h.mu.Unlock()
 	}
 
+	go h.syncDicts(ctx)
+
+	return h, nil
+}
+
+func (h *HermesConnection) syncDicts(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():

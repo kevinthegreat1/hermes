@@ -97,7 +97,7 @@ export function ConfigEditor(props: Props) {
           id="config-editor-hermes-backend"
           onChange={onHermesChange}
           value={jsonData.hermes ?? ''}
-          placeholder="localhost:50051"
+          placeholder="host.docker.internal:6880"
           width={40}
         />
       </InlineField>
