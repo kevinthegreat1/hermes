@@ -567,7 +567,7 @@ func TestBuildResponseKeyFiltering(t *testing.T) {
 
 	mock.ExpectQuery("SELECT").WillReturnRows(rows)
 	resultRows, _ := db.Query("SELECT")
-	qm := queryModel{Channels: []channelRef{{"CDH", "Attitude"}}, Keys: []string{"value.x", "value.y"}, TimeField: "time"}
+	qm := queryModel{Channels: []channelRef{{"CDH", "Attitude"}}, Keys: []keyRef{{"CDH", "Attitude", "value.x"}, {"CDH", "Attitude", "value.y"}}, TimeField: "time"}
 	resp := buildResponse(qm, resultRows, backend.DataResponse{})
 
 	if len(resp.Frames) != 2 {
@@ -792,7 +792,10 @@ func TestResourceHandlerKeys(t *testing.T) {
 	ds := &Datasource{db: db}
 
 	mock.ExpectQuery("SELECT DISTINCT").WillReturnRows(
-		sqlmock.NewRows([]string{"key"}).AddRow("value").AddRow("value.x").AddRow("value.y"),
+		sqlmock.NewRows([]string{"component", "name", "key"}).
+			AddRow("CDH", "Attitude", "value").
+			AddRow("CDH", "Attitude", "value.x").
+			AddRow("CDH", "Attitude", "value.y"),
 	)
 
 	req, _ := http.NewRequest("GET", "/telemetry/keys?components=CDH&channels=Attitude", nil)
@@ -803,12 +806,15 @@ func TestResourceHandlerKeys(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.code)
 	}
 
-	var result []string
+	var result []keyEntry
 	if err := json.Unmarshal(rr.body, &result); err != nil {
 		t.Fatalf("json unmarshal: %v", err)
 	}
 	if len(result) != 3 {
 		t.Errorf("expected 3 keys, got %v", result)
+	}
+	if result[0].Component != "CDH" || result[0].Channel != "Attitude" || result[0].Key != "value" {
+		t.Errorf("unexpected first key entry: %v", result[0])
 	}
 }
 
@@ -823,7 +829,7 @@ func TestResourceHandlerKeysEmpty(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.code)
 	}
 
-	var result []string
+	var result []keyEntry
 	if err := json.Unmarshal(rr.body, &result); err != nil {
 		t.Fatalf("json unmarshal: %v", err)
 	}

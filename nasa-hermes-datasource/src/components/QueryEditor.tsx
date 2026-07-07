@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CollapsableSection, ComboboxOption, DateTimePicker, InlineField, MultiCombobox, RadioButtonGroup } from '@grafana/ui';
 import { dateTime, DateTime, QueryEditorProps, SelectableValue } from '@grafana/data';
 import { DataSource } from '../datasource';
-import { ChannelRef, MyDataSourceOptions, MyQuery, QueryType, TimeField } from '../types';
+import { ChannelRef, KeyRef, MyDataSourceOptions, MyQuery, QueryType, TimeField } from '../types';
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
@@ -18,6 +18,26 @@ const TIME_FIELD_OPTIONS: Array<SelectableValue<TimeField>> = [
 
 function toOptions(values: string[]): Array<ComboboxOption<string>> {
   return values.map((v) => ({ label: v, value: v }));
+}
+
+function keyRefToValue(k: KeyRef): string {
+  return JSON.stringify(k);
+}
+
+function valueToKeyRef(v: string): KeyRef {
+  return JSON.parse(v) as KeyRef;
+}
+
+function toKeyOptions(entries: KeyRef[]): Array<ComboboxOption<string>> {
+  return entries.map((e) => ({
+    label: e.key,
+    description: `${e.component}.${e.channel}`,
+    value: keyRefToValue(e),
+  }));
+}
+
+function keyValues(keys: KeyRef[]): string[] {
+  return keys.map(keyRefToValue);
 }
 
 function channelToKey(ch: ChannelRef): string {
@@ -93,7 +113,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   };
 
   const onKeyChange = (options: Array<ComboboxOption<string>>) => {
-    const updated: MyQuery = { ...query, keys: options.map(({ value }) => value) };
+    const updated: MyQuery = { ...query, keys: options.map(({ value }) => valueToKeyRef(value)) };
     onChange(updated);
     if (updated.channels && updated.channels.length) {
       onRunQuery();
@@ -156,7 +176,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
       setKeyLoading(true);
       datasource
         .getKeys(query.channels)
-        .then((values) => setKeyOptions(toOptions(values)))
+        .then((entries) => setKeyOptions(toKeyOptions(entries)))
         .catch(() => setKeyOptions([]))
         .finally(() => setKeyLoading(false));
     }
@@ -226,7 +246,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
                 id="query-editor-key"
                 data-testid="query-editor-key"
                 options={keyOptions}
-                value={query.keys}
+                value={keyValues(query.keys ?? [])}
                 onChange={onKeyChange}
                 isClearable
                 loading={keyLoading}

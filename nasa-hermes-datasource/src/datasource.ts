@@ -1,7 +1,7 @@
 import { DataQueryRequest, DataSourceInstanceSettings, CoreApp, ScopedVars } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import { map } from 'rxjs/operators';
-import { MyQuery, MyDataSourceOptions, DEFAULT_QUERY, ChannelRef } from './types';
+import { MyQuery, MyDataSourceOptions, DEFAULT_QUERY, ChannelRef, KeyRef } from './types';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -36,7 +36,11 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
         name: templateSrv.replace(ch.name, scopedVars),
       })),
       sources: query.sources.map(s => templateSrv.replace(s, scopedVars)),
-      keys: query.keys.map(k => templateSrv.replace(k, scopedVars)),
+      keys: query.keys.map(k => ({
+        component: templateSrv.replace(k.component, scopedVars),
+        channel: templateSrv.replace(k.channel, scopedVars),
+        key: templateSrv.replace(k.key, scopedVars),
+      })),
       timeOverrideFrom: query.timeOverrideFrom,
       timeOverrideTo: query.timeOverrideTo,
       timeField: query.timeField ?? 'time'
@@ -59,7 +63,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return this.getResource('telemetry/sources');
   }
 
-  async getKeys(channels: ChannelRef[]): Promise<string[]> {
+  async getKeys(channels: ChannelRef[]): Promise<KeyRef[]> {
     const components = [...new Set(channels.map(ch => ch.component))];
     const names = channels.map(ch => ch.name);
     return this.getResource('telemetry/keys', { components, channels: names });

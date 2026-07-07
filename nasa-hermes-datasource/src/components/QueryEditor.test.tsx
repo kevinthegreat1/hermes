@@ -26,7 +26,11 @@ function mockDatasource(overrides?: Partial<DataSource>): DataSource {
   return {
     getChannels: jest.fn().mockResolvedValue([ch('CDH', 'Temperature'), ch('Sensors', 'Voltage')]),
     getSources: jest.fn().mockResolvedValue(['fsw-1', 'fsw-2']),
-    getKeys: jest.fn().mockResolvedValue(['value', 'value.x', 'value.y']),
+    getKeys: jest.fn().mockResolvedValue([
+      { component: 'CDH', channel: 'Temperature', key: 'value' },
+      { component: 'CDH', channel: 'Temperature', key: 'value.x' },
+      { component: 'CDH', channel: 'Temperature', key: 'value.y' },
+    ]),
     getEventSources: jest.fn().mockResolvedValue(['fsw-1', 'fsw-2']),
     ...overrides,
   } as unknown as DataSource;
@@ -57,7 +61,11 @@ describe('QueryEditor — Telemetry', () => {
 
   it('shows Key dropdown for compound channels', async () => {
     const ds = mockDatasource({
-      getKeys: jest.fn().mockResolvedValue(['value', 'value.x', 'value.y']),
+      getKeys: jest.fn().mockResolvedValue([
+      { component: 'CDH', channel: 'Temperature', key: 'value' },
+      { component: 'CDH', channel: 'Temperature', key: 'value.x' },
+      { component: 'CDH', channel: 'Temperature', key: 'value.y' },
+    ]),
     });
     render(
       <QueryEditor
@@ -75,7 +83,7 @@ describe('QueryEditor — Telemetry', () => {
 
   it('hides Key dropdown for scalar channels', async () => {
     const ds = mockDatasource({
-      getKeys: jest.fn().mockResolvedValue(['value']),
+      getKeys: jest.fn().mockResolvedValue([{ component: 'CDH', channel: 'Temperature', key: 'value' }]),
     });
     render(
       <QueryEditor
@@ -140,7 +148,11 @@ describe('QueryEditor — Telemetry', () => {
 
   it('displays existing telemetry query values', async () => {
     const ds = mockDatasource({
-      getKeys: jest.fn().mockResolvedValue(['value', 'value.x', 'value.y']),
+      getKeys: jest.fn().mockResolvedValue([
+      { component: 'CDH', channel: 'Temperature', key: 'value' },
+      { component: 'CDH', channel: 'Temperature', key: 'value.x' },
+      { component: 'CDH', channel: 'Temperature', key: 'value.y' },
+    ]),
     });
     render(
       <QueryEditor
@@ -151,7 +163,7 @@ describe('QueryEditor — Telemetry', () => {
             queryType: 'telemetry',
             channels: [ch('CDH', 'Attitude')],
             sources: ['fsw-1'],
-            keys: ['value.x'],
+            keys: [{ component: 'CDH', channel: 'Attitude', key: 'value.x' }],
           } as MyQuery,
         })}
       />
@@ -294,7 +306,7 @@ describe('QueryEditor — Events', () => {
 describe('QueryEditor — Multi-select', () => {
   it('renders multiple selected channels', async () => {
     const ds = mockDatasource({
-      getKeys: jest.fn().mockResolvedValue(['value']),
+      getKeys: jest.fn().mockResolvedValue([{ component: 'CDH', channel: 'Temperature', key: 'value' }]),
     });
     render(
       <QueryEditor

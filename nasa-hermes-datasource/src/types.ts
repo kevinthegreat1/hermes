@@ -9,11 +9,17 @@ export interface ChannelRef {
   name: string;
 }
 
+export interface KeyRef {
+  component: string;
+  channel: string;
+  key: string;
+}
+
 export interface MyQuery extends DataQuery {
   queryType: QueryType;
   channels: ChannelRef[];
   sources: string[];
-  keys: string[];
+  keys: KeyRef[];
   timeField?: TimeField;
   timeOverrideFrom?: string;
   timeOverrideTo?: string;

@@ -37,13 +37,19 @@ type channelRef struct {
 	Name      string `json:"name"`
 }
 
+type keyRef struct {
+	Component string `json:"component"`
+	Channel   string `json:"channel"`
+	Key       string `json:"key"`
+}
+
 type queryModel struct {
 	QueryType        string       `json:"queryType"`
 	Channels         []channelRef `json:"channels"`
 	Sources          []string     `json:"sources"`
 	TimeOverrideFrom string       `json:"timeOverrideFrom,omitempty"`
 	TimeOverrideTo   string       `json:"timeOverrideTo,omitempty"`
-	Keys             []string     `json:"keys,omitempty"`
+	Keys             []keyRef     `json:"keys,omitempty"`
 	TimeField        string       `json:"timeField"`
 }
 
@@ -185,10 +191,14 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 		components = append(components, c)
 	}
 
-	sqlKeyParam := pq.Array(qm.Keys)
-	if len(qm.Keys) > 0 {
-		keyPatterns := make([]string, len(qm.Keys))
-		for i, key := range qm.Keys {
+	keyStrings := make([]string, len(qm.Keys))
+	for i, k := range qm.Keys {
+		keyStrings[i] = k.Key
+	}
+	sqlKeyParam := pq.Array(keyStrings)
+	if len(keyStrings) > 0 {
+		keyPatterns := make([]string, len(keyStrings))
+		for i, key := range keyStrings {
 			keyPatterns[i] = key + "%"
 		}
 		sqlKeyParam = pq.Array(keyPatterns)
