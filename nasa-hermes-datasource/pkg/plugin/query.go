@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -328,8 +329,44 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 		return backend.ErrDataResponse(backend.StatusInternal, fmt.Sprintf("telemetry row iteration error: %v", err.Error()))
 	}
 
-	// Return all data frames
+	// Compute minimal display names across all frames
+	keySet := make(map[string]struct{})
+	sourceSet := make(map[string]struct{})
 	for _, frame := range frames {
+		for _, field := range frame.Fields {
+			if field.Labels == nil {
+				continue
+			}
+			if field.Labels["key"] != "value" {
+				keySet[field.Labels["key"]] = struct{}{}
+			}
+			sourceSet[field.Labels["source"]] = struct{}{}
+		}
+	}
+	multiKey := len(keySet) > 1
+	multiSource := len(sourceSet) > 1
+
+	// Return all data frames with display names
+	for _, frame := range frames {
+		var frameName string
+		for _, field := range frame.Fields {
+			if field.Labels == nil {
+				continue
+			}
+			parts := []string{field.Labels["component"], field.Labels["channel"]}
+			if multiKey && field.Labels["key"] != "value" {
+				parts = append(parts, field.Labels["key"])
+			}
+			displayName := strings.Join(parts, ".")
+			if multiSource {
+				displayName += " (" + field.Labels["source"] + ")"
+			}
+			field.SetConfig(&data.FieldConfig{
+				DisplayNameFromDS: displayName,
+			})
+			frameName = displayName
+		}
+		frame.Name = frameName
 		response.Frames = append(response.Frames, frame)
 	}
 	return response

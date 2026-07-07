@@ -185,8 +185,8 @@ func TestBuildResponseIntType(t *testing.T) {
 		t.Fatalf("expected 1 frame, got %d", len(resp.Frames))
 	}
 	frame := resp.Frames[0]
-	if frame.Name != "comp.ch./time(src)" {
-		t.Errorf("expected frame name 'comp.ch./time(src)', got %q", frame.Name)
+	if frame.Name != "comp.ch" {
+		t.Errorf("expected frame name 'comp.ch', got %q", frame.Name)
 	}
 	if len(frame.Fields) != 2 {
 		t.Fatalf("expected 2 fields, got %d", len(frame.Fields))
@@ -449,8 +449,8 @@ func TestQueryTelemetryWithMock(t *testing.T) {
 		t.Fatalf("expected 1 frame, got %d", len(dr.Frames))
 	}
 	frame := dr.Frames[0]
-	if frame.Name != "comp1.ch1./time(src1)" {
-		t.Errorf("expected frame name 'comp1.ch1./time(src1)', got %q", frame.Name)
+	if frame.Name != "comp1.ch1" {
+		t.Errorf("expected frame name 'comp1.ch1', got %q", frame.Name)
 	}
 	if frame.Fields[1].Name != "value" {
 		t.Errorf("expected field name 'value', got %q", frame.Fields[1].Name)
@@ -545,11 +545,11 @@ func TestBuildResponseMultiComponentChannel(t *testing.T) {
 	for _, f := range resp.Frames {
 		frameNames[f.Name] = true
 	}
-	if !frameNames["CDH.Temperature./time(fsw-1)"] {
-		t.Error("missing frame CDH.Temperature./time(fsw-1)")
+	if !frameNames["CDH.Temperature"] {
+		t.Error("missing frame CDH.Temperature")
 	}
-	if !frameNames["Sensors.Voltage./time(fsw-1)"] {
-		t.Error("missing frame Sensors.Voltage./time(fsw-1)")
+	if !frameNames["Sensors.Voltage"] {
+		t.Error("missing frame Sensors.Voltage")
 	}
 }
 
@@ -578,10 +578,10 @@ func TestBuildResponseKeyFiltering(t *testing.T) {
 	for _, f := range resp.Frames {
 		frameNames[f.Name] = true
 	}
-	if !frameNames["CDH.Attitude.value.x/time(fsw-1)"] {
+	if !frameNames["CDH.Attitude.value.x"] {
 		t.Error("missing frame for key value.x")
 	}
-	if !frameNames["CDH.Attitude.value.y/time(fsw-1)"] {
+	if !frameNames["CDH.Attitude.value.y"] {
 		t.Error("missing frame for key value.y")
 	}
 }
@@ -606,8 +606,8 @@ func TestBuildResponseErtTimeField(t *testing.T) {
 		t.Fatalf("expected 1 frame, got %d", len(resp.Frames))
 	}
 	frame := resp.Frames[0]
-	if frame.Name != "c.ch./ert(src)" {
-		t.Errorf("expected frame name 'c.ch./ert(src)', got %q", frame.Name)
+	if frame.Name != "c.ch" {
+		t.Errorf("expected frame name 'c.ch', got %q", frame.Name)
 	}
 	if frame.Fields[0].Name != "ert" {
 		t.Errorf("expected time field 'ert', got %q", frame.Fields[0].Name)
