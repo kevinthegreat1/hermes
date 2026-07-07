@@ -34,6 +34,7 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
   host?: string;
   user?: string;
   database?: string;
+  hermes?: string;
 }
 
 /**
