@@ -149,9 +149,9 @@ describe('QueryEditor — Telemetry', () => {
   it('displays existing telemetry query values', async () => {
     const ds = mockDatasource({
       getKeys: jest.fn().mockResolvedValue([
-      { component: 'CDH', channel: 'Temperature', key: 'value' },
-      { component: 'CDH', channel: 'Temperature', key: 'value.x' },
-      { component: 'CDH', channel: 'Temperature', key: 'value.y' },
+      { component: 'CDH', channel: 'Attitude', key: 'value' },
+      { component: 'CDH', channel: 'Attitude', key: 'value.x' },
+      { component: 'CDH', channel: 'Attitude', key: 'value.y' },
     ]),
     });
     render(
