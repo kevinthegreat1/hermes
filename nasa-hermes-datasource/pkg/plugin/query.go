@@ -1,10 +1,12 @@
 package plugin
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -371,5 +373,8 @@ func buildResponse(qm queryModel, rows *sql.Rows, response backend.DataResponse)
 		frame.Name = frameName
 		response.Frames = append(response.Frames, frame)
 	}
+	slices.SortFunc(response.Frames, func(a, b *data.Frame) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
 	return response
 }
