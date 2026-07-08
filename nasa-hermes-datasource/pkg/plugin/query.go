@@ -205,12 +205,6 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 		sqlKeyParam = pq.Array(keyPatterns)
 	}
 
-	// Set time grouping interval
-	intervalStr := fmt.Sprintf("%d seconds", int(queryInterval.Seconds()))
-	if queryInterval.Seconds() < 1 {
-		intervalStr = "1 second"
-	}
-
 	queryArgs := []any{
 		pq.Array(components),
 		pq.Array(names),
@@ -218,13 +212,21 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 		queryFrom,
 		queryTo,
 		sqlKeyParam,
-		intervalStr,
+	}
+
+	// Set time grouping interval
+	var intervalExpr string
+	if queryInterval.Milliseconds() >= 1 {
+		queryArgs = append(queryArgs, fmt.Sprintf("%d milliseconds", int(queryInterval.Milliseconds())))
+		intervalExpr = "time_bucket($7::interval, t." + timeColumn + ")"
+	} else {
+		intervalExpr = "t." + timeColumn
 	}
 
 	// TODO: also consider having valueType in telemetryDefs instead of telemetry
 	rawSQL := fmt.Sprintf(`
 		SELECT
-			time_bucket($7::interval, t.%s) AS time_bucket,
+			%s AS time_bucket,
 			d.component,
 			d.name,
 			t.source,
@@ -242,7 +244,7 @@ func (d *Datasource) queryTelemetry(ctx context.Context, _ backend.PluginContext
 		  AND t.%s >= $4 AND t.%s <= $5
 		  AND ($6::text[] = '{}' OR t.key LIKE ANY($6))
 		GROUP BY time_bucket, d.component, d.name, t.source, t.valueType, t.key
-		ORDER BY time_bucket ASC;`, timeColumn, timeColumn, timeColumn)
+		ORDER BY time_bucket ASC;`, intervalExpr, timeColumn, timeColumn)
 
 	// Execute the query
 	rows, err := d.db.QueryContext(ctx, rawSQL, queryArgs...)
