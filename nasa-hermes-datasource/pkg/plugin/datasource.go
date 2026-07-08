@@ -51,6 +51,9 @@ func NewDatasource(_ context.Context, settings backend.DataSourceInstanceSetting
 		return nil, fmt.Errorf("unable to initialize postgres database driver: %w", err)
 	}
 
+	if config.Hermes == "" {
+		return nil, fmt.Errorf("unable to initialize hermes client: Hermes connection string is empty")
+	}
 	hermesConn, err := newHermesConn(context.Background(), config.Hermes)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize hermes client: %w", err)
