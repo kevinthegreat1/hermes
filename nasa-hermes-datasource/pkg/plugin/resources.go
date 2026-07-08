@@ -1,9 +1,12 @@
 package plugin
 
 import (
+	"cmp"
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"slices"
+	"sort"
 
 	"github.com/lib/pq"
 )
@@ -47,6 +50,7 @@ func (d *Datasource) handleGetTelemetryComponents(w http.ResponseWriter, r *http
 		items = append(items, comp)
 	}
 
+	sort.Strings(items)
 	writeJSONResponse(w, items)
 }
 
@@ -71,12 +75,18 @@ func (d *Datasource) handleGetTelemetryChannels(w http.ResponseWriter, r *http.R
 	}
 	d.hermes.mu.RUnlock()
 
-	channels := []channelEntry{}
+	items := []channelEntry{}
 	for entry := range channelMap {
-		channels = append(channels, entry)
+		items = append(items, entry)
 	}
 
-	writeJSONResponse(w, channelMap)
+	slices.SortFunc(items, func(a, b channelEntry) int {
+		return cmp.Or(
+			cmp.Compare(a.Component, b.Component),
+			cmp.Compare(a.Name, b.Name),
+		)
+	})
+	writeJSONResponse(w, items)
 }
 
 func (d *Datasource) handleGetTelemetrySources(w http.ResponseWriter, r *http.Request) {
