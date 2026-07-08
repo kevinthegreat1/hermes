@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-
-	"github.com/lib/pq"
 )
 
 func scanStrings(rows *sql.Rows) ([]string, error) {
@@ -28,16 +26,25 @@ func scanStrings(rows *sql.Rows) ([]string, error) {
 }
 
 func (d *Datasource) handleGetTelemetryComponents(w http.ResponseWriter, r *http.Request) {
-	rows, err := d.db.QueryContext(r.Context(), "SELECT DISTINCT component FROM telemetryDefs ORDER BY component;")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	components := make(map[string]bool)
+
+	d.hermes.mu.RLock()
+	for _, dict := range d.hermes.dicts {
+		for _, ns := range dict.GetContent() {
+			for _, telemetryDef := range ns.Telemetry {
+				if telemetryDef.GetComponent() != "" {
+					components[telemetryDef.GetComponent()] = true
+				}
+			}
+		}
 	}
-	items, err := scanStrings(rows)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	d.hermes.mu.RUnlock()
+
+	items := make([]string, 0, len(components))
+	for comp := range components {
+		items = append(items, comp)
 	}
+
 	writeJSONResponse(w, items)
 }
 
@@ -47,27 +54,27 @@ type channelEntry struct {
 }
 
 func (d *Datasource) handleGetTelemetryChannels(w http.ResponseWriter, r *http.Request) {
-	rows, err := d.db.QueryContext(r.Context(), "SELECT component, name FROM telemetryDefs ORDER BY component, name;")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer func() { _ = rows.Close() }()
+	channelsMap := make(map[channelEntry]bool)
 
-	items := []channelEntry{}
-	for rows.Next() {
-		var entry channelEntry
-		if err := rows.Scan(&entry.Component, &entry.Name); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+	d.hermes.mu.RLock()
+	for _, dict := range d.hermes.dicts {
+		for _, ns := range dict.GetContent() {
+			for _, telemetryDef := range ns.Telemetry {
+				channelsMap[channelEntry{
+					Component: telemetryDef.GetComponent(),
+					Name:      telemetryDef.GetName(),
+				}] = true
+			}
 		}
-		items = append(items, entry)
 	}
-	if err := rows.Err(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	d.hermes.mu.RUnlock()
+
+	channels := []channelEntry{}
+	for entry := range channelsMap {
+		channels = append(channels, entry)
 	}
-	writeJSONResponse(w, items)
+
+	writeJSONResponse(w, channelsMap)
 }
 
 func (d *Datasource) handleGetTelemetrySources(w http.ResponseWriter, r *http.Request) {
@@ -98,34 +105,39 @@ func (d *Datasource) handleGetTelemetryKeys(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	query := `
-		SELECT DISTINCT d.component, d.name, t.key 
-		FROM telemetry t
-		JOIN telemetryDefs d ON t.telemetryDefId = d.id
-		WHERE d.component = ANY($1) AND d.name = ANY($2) AND t.key IS NOT NULL
-		ORDER BY d.component, d.name, t.key
-		LIMIT 200;`
-
-	rows, err := d.db.QueryContext(r.Context(), query, pq.Array(components), pq.Array(channels))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	compSet := make(map[string]bool)
+	for _, c := range components {
+		compSet[c] = true
 	}
-	defer func() { _ = rows.Close() }()
+	chanSet := make(map[string]bool)
+	for _, c := range channels {
+		chanSet[c] = true
+	}
 
-	items := []keyEntry{}
-	for rows.Next() {
-		var entry keyEntry
-		if err := rows.Scan(&entry.Component, &entry.Channel, &entry.Key); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+	uniqueKeys := make(map[string]bool)
+
+	d.hermes.mu.RLock()
+	for _, dict := range d.hermes.dicts {
+		for _, ns := range dict.GetContent() {
+			for _, telemetryDef := range ns.Telemetry {
+				if compSet[telemetryDef.GetComponent()] && chanSet[telemetryDef.GetName()] {
+					// Iterates over telemetry parameters defined in your proto models
+					for _, arg := range telemetryDef.GetArgs() {
+						if arg.GetName() != "" {
+							uniqueKeys[arg.GetName()] = true
+						}
+					}
+				}
+			}
 		}
-		items = append(items, entry)
 	}
-	if err := rows.Err(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	d.hermes.mu.RUnlock()
+
+	items := make([]keyEntry, 0, len(uniqueKeys))
+	for k := range uniqueKeys {
+		items = append(items, keyEntry{Key: k})
 	}
+
 	writeJSONResponse(w, items)
 }
 
