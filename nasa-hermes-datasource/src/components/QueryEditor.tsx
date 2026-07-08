@@ -50,7 +50,7 @@ function keyToChannel(key: string): ChannelRef {
 
 function toChannelOptions(entries: ChannelRef[]): Array<ComboboxOption<string>> {
   return entries.map((e) => ({
-    label: e.name,
+    label: `${e.component}.${e.name}`,
     description: e.component,
     value: channelToKey(e),
   }));
