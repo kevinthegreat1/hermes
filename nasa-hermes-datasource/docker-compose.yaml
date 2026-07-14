@@ -16,6 +16,5 @@ services:
       - 5432:5432/tcp
     volumes:
       - timescale-data:/var/lib/postgresql/data
-      - ./provisioning/datasources/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
 volumes:
   timescale-data:
