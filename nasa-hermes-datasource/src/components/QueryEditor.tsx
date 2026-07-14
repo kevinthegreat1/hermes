@@ -1,363 +1,114 @@
-import React, { useEffect, useState } from 'react';
-import { CollapsableSection, ComboboxOption, DateTimePicker, InlineField, MultiCombobox, RadioButtonGroup } from '@grafana/ui';
-import { dateTime, DateTime, QueryEditorProps, SelectableValue } from '@grafana/data';
+import React, { useState } from 'react';
+import { css } from '@emotion/css';
+import { ConfirmModal, RadioButtonGroup } from '@grafana/ui';
+import { dateTime, QueryEditorProps, SelectableValue } from '@grafana/data';
 import { DataSource } from '../datasource';
-import { ChannelRef, KeyRef, MyDataSourceOptions, MyQuery, QueryType, TimeField } from '../types';
+import { MyDataSourceOptions, MyQuery, withDefaults } from '../types';
+import { BuilderEditor } from './BuilderEditor';
+import { SqlEditor } from './SqlEditor';
+import { buildQuery } from '../query';
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
-const QUERY_TYPE_OPTIONS: Array<SelectableValue<QueryType>> = [
-  { label: 'Telemetry', value: 'telemetry' },
-  { label: 'Events', value: 'events' },
+const EDITOR_MODE_OPTIONS: Array<SelectableValue<string>> = [
+  { label: 'Builder', value: 'builder' },
+  { label: 'Code', value: 'code' },
 ];
 
-const TIME_FIELD_OPTIONS: Array<SelectableValue<TimeField>> = [
-  { label: 'Receive Time', value: 'ert' },
-  { label: 'On-board Time', value: 'time' },
-];
+export function QueryEditor({ query, onChange, onRunQuery, datasource, range }: Props) {
+  const [editorMode, setEditorMode] = useState<string>('builder');
+  const [showConfirmSwitch, setShowConfirmSwitch] = useState(false);
+  const [builderQueryType, setBuilderQueryType] = useState<string>(query.queryType ?? 'telemetry');
+  const [generatedSql, setGeneratedSql] = useState<string | undefined>(undefined);
 
-function toOptions(values: string[]): Array<ComboboxOption<string>> {
-  return values.map((v) => ({ label: v, value: v }));
-}
-
-function keyRefToValue(k: KeyRef): string {
-  return JSON.stringify(k);
-}
-
-function valueToKeyRef(v: string): KeyRef {
-  return JSON.parse(v) as KeyRef;
-}
-
-function toKeyOptions(entries: KeyRef[]): Array<ComboboxOption<string>> {
-  return entries.map((e) => ({
-    label: e.key,
-    value: keyRefToValue(e),
-  }));
-}
-
-function keyValues(keys: KeyRef[]): string[] {
-  return keys.map(keyRefToValue);
-}
-
-function channelKeyId(component: string, channel: string): string {
-  return `${component}\0${channel}`;
-}
-
-function groupKeysByChannel(entries: KeyRef[]): Record<string, KeyRef[]> {
-  const grouped: Record<string, KeyRef[]> = {};
-  for (const e of entries) {
-    const id = channelKeyId(e.component, e.channel);
-    if (!grouped[id]) {
-      grouped[id] = [];
-    }
-    grouped[id].push(e);
-  }
-  return grouped;
-}
-
-function channelToKey(ch: ChannelRef): string {
-  return JSON.stringify(ch);
-}
-
-function keyToChannel(key: string): ChannelRef {
-  return JSON.parse(key) as ChannelRef;
-}
-
-function toChannelOptions(entries: ChannelRef[]): Array<ComboboxOption<string>> {
-  return entries.map((e) => ({
-    label: `${e.component}.${e.name}`,
-    description: e.component,
-    value: channelToKey(e),
-  }));
-}
-
-function channelValues(channels: ChannelRef[]): string[] {
-  return channels.map(channelToKey);
-}
-
-export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) {
-  const queryType = query.queryType ?? 'telemetry';
-
-  // Telemetry state
-  const [channelOptions, setChannelOptions] = useState<Array<ComboboxOption<string>>>([]);
-  const [sourceOptions, setSourceOptions] = useState<Array<ComboboxOption<string>>>([]);
-  const [keysByChannel, setKeysByChannel] = useState<Record<string, KeyRef[]>>({});
-
-  const [channelLoading, setChannelLoading] = useState(false);
-  const [sourceLoading, setSourceLoading] = useState(false);
-  const [keyLoading, setKeyLoading] = useState(false);
-
-  // Event state
-  const [eventSourceOptions, setEventSourceOptions] = useState<Array<ComboboxOption<string>>>([]);
-  const [eventSourceLoading, setEventSourceLoading] = useState(false);
-
-  // --- Handlers ---
-
-  const onQueryTypeChange = (value: QueryType) => {
-    const updated: MyQuery = {
-      ...query,
-      queryType: value,
-      channels: [],
-      keys: [],
-      sources: [],
-    };
-    onChange(updated);
-    if (value === 'events') {
-      onRunQuery();
-    }
-  };
-
-  const onChannelChange = (options: Array<ComboboxOption<string>>) => {
-    const channels = options.map(({ value }) => keyToChannel(value));
-    const updated: MyQuery = { ...query, channels, keys: [], sources: [] };
-    onChange(updated);
-    if (channels.length) {
-      onRunQuery();
-    }
-  };
-
-  const onSourceChange = (options: Array<ComboboxOption<string>>) => {
-    const updated: MyQuery = { ...query, sources: options.map(({ value }) => value) };
-    onChange(updated);
-    if (queryType === 'telemetry' && updated.channels && updated.channels.length) {
-      onRunQuery();
-    }
-    if (queryType === 'events') {
-      onRunQuery();
-    }
-  };
-
-  const onChannelKeyChange = (chComponent: string, chName: string, options: Array<ComboboxOption<string>>) => {
-    const id = channelKeyId(chComponent, chName);
-    const newKeys = options.map(({ value }) => valueToKeyRef(value));
-    const otherKeys = (query.keys ?? []).filter(
-      (k) => channelKeyId(k.component, k.channel) !== id
-    );
-
-    const channels = newKeys.length === 0
-      ? (query.channels ?? []).filter((ch) => !(ch.component === chComponent && ch.name === chName))
-      : query.channels;
-    const updated: MyQuery = { ...query, channels, keys: [...otherKeys, ...newKeys] };
-    onChange(updated);
-    if (updated.channels.length) {
-      onRunQuery();
-    }
-  };
-
-  const onTimeFieldChange = (value: TimeField) => {
-    onChange({ ...query, timeField: value });
-    onRunQuery();
-  };
-
-  const onTimeOverrideFromChange = (date?: DateTime) => {
-    onChange({ ...query, timeOverrideFrom: date ? date.toISOString() : undefined });
-    onRunQuery();
-  };
-
-  const onTimeOverrideToChange = (date?: DateTime) => {
-    onChange({ ...query, timeOverrideTo: date ? date.toISOString() : undefined });
-    onRunQuery();
-  };
-
-  // --- Telemetry data loading ---
-
-  useEffect(() => {
-    if (queryType !== 'telemetry') {
-      return;
-    }
-    const loadChannels = async () => {
-      setChannelLoading(true);
-      datasource
-        .getChannels()
-        .then((entries) => setChannelOptions(toChannelOptions(entries)))
-        .catch(() => setChannelOptions([]))
-        .finally(() => setChannelLoading(false));
-    };
-    loadChannels();
-  }, [datasource, queryType]);
-
-  useEffect(() => {
-    if (queryType !== 'telemetry') {
-      return;
-    }
-    const loadSources = async () => {
-      setSourceLoading(true);
-      datasource
-        .getSources()
-        .then((values) => setSourceOptions(toOptions(values)))
-        .catch(() => setSourceOptions([]))
-        .finally(() => setSourceLoading(false));
-    };
-    loadSources();
-  }, [datasource, queryType]);
-
-  useEffect(() => {
-    if (queryType !== 'telemetry' || !query.channels || !query.channels.length) {
-      setTimeout(() => setKeysByChannel({}), 0);
-      return;
-    }
-    const loadKeys = async () => {
-      setKeyLoading(true);
-      datasource
-        .getKeys(query.channels)
-        .then((entries) => setKeysByChannel(groupKeysByChannel(entries)))
-        .catch(() => setKeysByChannel({}))
-        .finally(() => setKeyLoading(false));
-    }
-    loadKeys();
-  }, [datasource, queryType, query.channels]);
-
-  useEffect(() => {
-    const currentKeys = query.keys ?? [];
-    let added = false;
-    const newKeys = [...currentKeys];
-    for (const [id, chKeys] of Object.entries(keysByChannel)) {
-      if (chKeys.length <= 1) {
-        continue;
+  const onEditorModeChange = (mode: string) => {
+    if (mode === 'builder' && editorMode === 'code') {
+      const userEdited = query.rawSql?.trim() && query.rawSql !== generatedSql;
+      if (userEdited) {
+        setShowConfirmSwitch(true);
+        return;
       }
-      const hasSelection = currentKeys.some(
-        (k) => channelKeyId(k.component, k.channel) === id
-      );
-      if (!hasSelection) {
-        newKeys.push(...chKeys);
-        added = true;
+      onChange({ ...query, rawSql: undefined, queryType: builderQueryType as any });
+      setEditorMode('builder');
+      onRunQuery();
+      return;
+    }
+    if (mode === 'code') {
+      setBuilderQueryType(query.queryType ?? 'telemetry');
+    }
+    setEditorMode(mode);
+    if (mode === 'code') {
+      try {
+        const filled = withDefaults(query);
+        const from = range?.from ?? dateTime();
+        const to = range?.to ?? dateTime();
+        const sql = buildQuery(filled, { range: { from, to, raw: { from, to } } } as any);
+        setGeneratedSql(sql);
+        onChange({ ...query, rawSql: sql, queryType: 'raw' });
+      } catch (e) {
+        console.warn('Could not generate SQL for code editor:', e);
       }
     }
-    if (added) {
-      onChange({ ...query, keys: newKeys });
-    }
-  }, [keysByChannel, query, onChange]);
-
-  // --- Event data loading ---
-
-  useEffect(() => {
-    if (queryType !== 'events') {
-      return;
-    }
-    const loadEventSources = async () => {
-      setEventSourceLoading(true);
-      datasource
-        .getEventSources()
-        .then((values) => setEventSourceOptions(toOptions(values)))
-        .catch(() => setEventSourceOptions([]))
-        .finally(() => setEventSourceLoading(false));
-    }
-    loadEventSources();
-  }, [datasource, queryType]);
+  };
 
   return (
     <>
       <div style={{ marginTop: 8, marginBottom: 8 }}>
         <RadioButtonGroup
-          id="query-editor-query-type"
-          options={QUERY_TYPE_OPTIONS}
-          value={queryType}
-          onChange={onQueryTypeChange}
+          id="query-editor-editor-mode"
+          options={EDITOR_MODE_OPTIONS}
+          value={editorMode}
+          onChange={onEditorModeChange}
           size="sm"
           fullWidth={true}
         />
       </div>
 
-      {queryType === 'telemetry' && (
-        <>
-          <InlineField label="Channel" labelWidth={16} tooltip="Telemetry channel name" grow={true} required>
-            <MultiCombobox
-              id="query-editor-channel"
-              data-testid="query-editor-channel"
-              options={channelOptions}
-              value={channelValues(query.channels ?? [])}
-              onChange={onChannelChange}
-              loading={channelLoading}
-              placeholder="Select channel"
-            />
-          </InlineField>
-          <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)" grow={true}>
-            <MultiCombobox
-              id="query-editor-source"
-              data-testid="query-editor-source"
-              options={sourceOptions}
-              value={query.sources}
-              onChange={onSourceChange}
-              isClearable
-              loading={sourceLoading}
-              placeholder="All sources"
-            />
-          </InlineField>
-          {Object.entries(keysByChannel)
-            .filter(([, keys]) => keys.length > 1)
-            .map(([id, keys]) => {
-              const { component: chComp, channel: chName } = keys[0];
-              const chLabel = `${chComp}.${chName}`;
-              const selectedForChannel = (query.keys ?? []).filter(
-                (k) => channelKeyId(k.component, k.channel) === id
-              );
-              return (
-                <InlineField
-                  key={id}
-                  label={chLabel}
-                  tooltip={`Value field path for ${chLabel}`}
-                  grow={true}
-                >
-                  <MultiCombobox
-                    id={`query-editor-key-${id}`}
-                    data-testid={`query-editor-key-${id}`}
-                    options={toKeyOptions(keys)}
-                    value={keyValues(selectedForChannel)}
-                    onChange={(opts) => onChannelKeyChange(chComp, chName, opts)}
-                    isClearable
-                    loading={keyLoading}
-                    placeholder="All keys"
-                  />
-                </InlineField>
-              );
-            })}
-        </>
-      )}
-
-      {queryType === 'events' && (
-        <>
-          <InlineField label="Source" labelWidth={16} tooltip="FSW source identifier (optional)">
-            <MultiCombobox
-              id="query-editor-event-source"
-              data-testid="query-editor-event-source"
-              options={eventSourceOptions}
-              value={query.sources}
-              onChange={onSourceChange}
-              isClearable
-              loading={eventSourceLoading}
-              placeholder="All sources"
-              width={56}
-            />
-          </InlineField>
-        </>
-      )}
-
-      <div style={{ marginTop: 8, marginBottom: 8 }}>
-        <RadioButtonGroup
-          id="query-editor-time-field"
-          options={TIME_FIELD_OPTIONS}
-          value={query.timeField ?? 'ert'}
-          onChange={onTimeFieldChange}
-          size="sm"
-          fullWidth={false}
+      {editorMode === 'builder' && (
+        <BuilderEditor
+          query={query}
+          onChange={onChange}
+          onRunQuery={onRunQuery}
+          datasource={datasource}
         />
-      </div>
-      <CollapsableSection label="Time override" isOpen={false}>
-        <InlineField label="From" labelWidth={16} tooltip="Absolute start time (optional)">
-          <DateTimePicker
-            date={query.timeOverrideFrom ? dateTime(query.timeOverrideFrom) : undefined}
-            onChange={onTimeOverrideFromChange}
-            clearable
-          />
-        </InlineField>
-        <InlineField label="To" labelWidth={16} tooltip="Absolute end time (optional)">
-          <DateTimePicker
-            date={query.timeOverrideTo ? dateTime(query.timeOverrideTo) : undefined}
-            onChange={onTimeOverrideToChange}
-            clearable
-          />
-        </InlineField>
-      </CollapsableSection>
+      )}
+
+      {editorMode === 'code' && (
+        <SqlEditor
+          query={query}
+          onChange={onChange}
+          onRunQuery={onRunQuery}
+        />
+      )}
+
+      <ConfirmModal
+        isOpen={showConfirmSwitch}
+        title="Warning"
+        body={
+          <>
+            <p>Builder mode does not display changes made in code. The query builder will display the last changes you made in builder mode.</p>
+            <p>Do you want to copy your code to the clipboard?</p>
+          </>
+        }
+        modalClass={css({ minWidth: 600 })}
+        confirmText="Copy code and switch"
+        alternativeText="Discard code and switch"
+        dismissText="Cancel"
+        onConfirm={() => {
+          navigator.clipboard.writeText(query.rawSql ?? '');
+          onChange({ ...query, rawSql: undefined, queryType: builderQueryType as any });
+          setEditorMode('builder');
+          setShowConfirmSwitch(false);
+          onRunQuery();
+        }}
+        onAlternative={() => {
+          onChange({ ...query, rawSql: undefined, queryType: builderQueryType as any });
+          setEditorMode('builder');
+          setShowConfirmSwitch(false);
+          onRunQuery();
+        }}
+        onDismiss={() => setShowConfirmSwitch(false)}
+      />
     </>
   );
 }

@@ -12,7 +12,6 @@ type PluginSettings struct {
 	User     string                `json:"user"`
 	Database string                `json:"database"`
 	Secrets  *SecretPluginSettings `json:"-"`
-	Hermes   string                `json:"hermes"`
 }
 
 type SecretPluginSettings struct {

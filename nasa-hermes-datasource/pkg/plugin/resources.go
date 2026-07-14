@@ -1,12 +1,9 @@
 package plugin
 
 import (
-	"cmp"
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"slices"
-	"sort"
 
 	"github.com/lib/pq"
 )
@@ -31,26 +28,16 @@ func scanStrings(rows *sql.Rows) ([]string, error) {
 }
 
 func (d *Datasource) handleGetTelemetryComponents(w http.ResponseWriter, r *http.Request) {
-	components := make(map[string]bool)
-
-	d.hermes.mu.RLock()
-	for _, dict := range d.hermes.dicts {
-		for _, ns := range dict.GetContent() {
-			for _, telemetryDef := range ns.Telemetry {
-				if telemetryDef.GetComponent() != "" {
-					components[telemetryDef.GetComponent()] = true
-				}
-			}
-		}
+	rows, err := d.db.QueryContext(r.Context(), "SELECT DISTINCT component FROM telemetryDefs ORDER BY component;")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	d.hermes.mu.RUnlock()
-
-	items := make([]string, 0, len(components))
-	for comp := range components {
-		items = append(items, comp)
+	items, err := scanStrings(rows)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-
-	sort.Strings(items)
 	writeJSONResponse(w, items)
 }
 
@@ -60,32 +47,26 @@ type channelEntry struct {
 }
 
 func (d *Datasource) handleGetTelemetryChannels(w http.ResponseWriter, r *http.Request) {
-	channelMap := make(map[channelEntry]bool)
-
-	d.hermes.mu.RLock()
-	for _, dict := range d.hermes.dicts {
-		for _, ns := range dict.GetContent() {
-			for _, telemetryDef := range ns.Telemetry {
-				channelMap[channelEntry{
-					Component: telemetryDef.GetComponent(),
-					Name:      telemetryDef.GetName(),
-				}] = true
-			}
-		}
+	rows, err := d.db.QueryContext(r.Context(), "SELECT component, name FROM telemetryDefs ORDER BY component, name;")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	d.hermes.mu.RUnlock()
+	defer func() { _ = rows.Close() }()
 
 	items := []channelEntry{}
-	for entry := range channelMap {
+	for rows.Next() {
+		var entry channelEntry
+		if err := rows.Scan(&entry.Component, &entry.Name); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		items = append(items, entry)
 	}
-
-	slices.SortFunc(items, func(a, b channelEntry) int {
-		return cmp.Or(
-			cmp.Compare(a.Component, b.Component),
-			cmp.Compare(a.Name, b.Name),
-		)
-	})
+	if err := rows.Err(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	writeJSONResponse(w, items)
 }
 
@@ -117,39 +98,6 @@ func (d *Datasource) handleGetTelemetryKeys(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// I dont see a way to get keys from the dictionary.
-	// compSet := make(map[string]bool)
-	// for _, c := range components {
-	// 	compSet[c] = true
-	// }
-	// chanSet := make(map[string]bool)
-	// for _, c := range channels {
-	// 	chanSet[c] = true
-	// }
-
-	// keyMap := make(map[string]bool)
-
-	// d.hermes.mu.RLock()
-	// for _, dict := range d.hermes.dicts {
-	// 	for _, ns := range dict.GetContent() {
-	// 		for _, telemetryDef := range ns.Telemetry {
-	// 			if compSet[telemetryDef.GetComponent()] && chanSet[telemetryDef.GetName()] {
-	// 				for _, arg := range telemetryDef.GetArgs() {
-	// 					if arg.GetName() != "" {
-	// 						keyMap[arg.GetName()] = true
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// d.hermes.mu.RUnlock()
-
-	// keys := make([]keyEntry, 0, len(keyMap))
-	// for k := range keyMap {
-	// 	keys = append(keys, keyEntry{Key: k})
-	// }
-
 	query := `
 		SELECT DISTINCT d.component, d.name, t.key 
 		FROM telemetry t
@@ -178,7 +126,6 @@ func (d *Datasource) handleGetTelemetryKeys(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	writeJSONResponse(w, items)
 }
 

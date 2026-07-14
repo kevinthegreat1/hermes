@@ -1,7 +1,8 @@
 import { DataQueryRequest, DataSourceInstanceSettings, CoreApp, ScopedVars } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import { map } from 'rxjs/operators';
-import { MyQuery, MyDataSourceOptions, DEFAULT_QUERY, ChannelRef, KeyRef } from './types';
+import { MyQuery, MyDataSourceOptions, DEFAULT_QUERY, ChannelRef, KeyRef, withDefaults } from './types';
+import { buildQuery } from 'query';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -9,11 +10,20 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   query(request: DataQueryRequest<MyQuery>) {
+    // Build raw SQL for each target if not already provided
+    request.targets.forEach((target) => {
+      const filled = withDefaults(target);
+      Object.assign(target, filled);
+      if (!target.rawSql) {
+        target.rawSql = buildQuery(target, request);
+      }
+    });
+
     return super.query(request).pipe(
       map((response) => {
         for (const result of response.data) {
           const query = request.targets.find((t) => t.refId === result.refId);
-          if (query?.queryType === 'events' && query.sources.length) {
+          if (query?.queryType === 'events' && query.sources?.length) {
             result.fields = result.fields.filter((f: { name: string }) => f.name !== 'source');
           }
         }
@@ -30,28 +40,29 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     const templateSrv = getTemplateSrv();
     return {
       ...query,
-      queryType: query.queryType ?? 'telemetry',
-      channels: query.channels.map(ch => ({
+      channels: query.channels?.map(ch => ({
         component: templateSrv.replace(ch.component, scopedVars),
         name: templateSrv.replace(ch.name, scopedVars),
-      })),
-      sources: query.sources.map(s => templateSrv.replace(s, scopedVars)),
-      keys: query.keys.map(k => ({
+      })) ?? [],
+      sources: query.sources?.map(s => templateSrv.replace(s, scopedVars)) ?? [],
+      keys: query.keys?.map(k => ({
         component: templateSrv.replace(k.component, scopedVars),
         channel: templateSrv.replace(k.channel, scopedVars),
         key: templateSrv.replace(k.key, scopedVars),
-      })),
-      timeOverrideFrom: query.timeOverrideFrom,
-      timeOverrideTo: query.timeOverrideTo,
-      timeField: query.timeField ?? 'time'
+      })) ?? [],
     };
   }
 
   filterQuery(query: MyQuery): boolean {
+    if (query.rawSql) {
+      return true;
+    }
+
     if (query.queryType === 'events') {
       return true;
     }
-    return !!query.channels.length;
+
+    return !!(query.channels && query.channels.length);
   }
 
   // Telemetry resources
@@ -69,7 +80,6 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return this.getResource('telemetry/keys', { components, channels: names });
   }
 
-  // Event resources
   async getEventSources(): Promise<string[]> {
     return this.getResource('events/sources');
   }
