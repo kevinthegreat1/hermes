@@ -16,7 +16,7 @@ Hermes offers a TimescaleDB profile to connect your backend to a TimescaleDB dat
 
 ### Grafana Plugin
 
-Install the Hermes Grafana plugin from the [Grafana Plugin marketplace](https://grafana.com/grafana/plugins/). Then, configure the Hermes data source by navigating to the `Connections` dropdown and selecting `Data sources`. You should see a Hermes data source. If you do not see one, add a new data source. Next, fill out the connection information. The default config parameters are shown in the screenshot below, with password `password`. Once done, click `Save & test` to test the connection.
+Install the Hermes Grafana plugin by following the [Grafana plugin installation instructions](../grafana.md#installing-the-hermes-data-source-plugin). Then, configure the Hermes data source by navigating to the `Connections` dropdown and selecting `Data sources`. You should see a Hermes data source. If you do not see one, add a new data source. Next, fill out the connection information. The default config parameters are shown in the screenshot below, with password `password`. Once done, click `Save & test` to test the connection.
 
 ![Grafana Data Sources page configuring the Hermes data source with a blue "Save & test" button](../../assets/grafana-plugin-datasource.png)
 
