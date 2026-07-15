@@ -30,4 +30,4 @@ jobs:
 
       - uses: grafana/plugin-actions/bundle-size@bundle-size/v1.0.2
         with:
-          path: ./nasa-hermes-datasource
+          working-directory: ./nasa-hermes-datasource
