@@ -21,6 +21,7 @@ function waitPort(target: string, retries = 10, timeout = 500) {
   const [host, portStr] = target.split(':');
   const port = Number(portStr);
 
+  // TODO I don't think this works properly
   return new Promise<void>((resolve, reject) => {
     const tryPort = () => {
       const socket = createConnection({ host, port }).setTimeout(timeout);
@@ -61,15 +62,9 @@ test('"Save & test" should be successful when configuration is valid', async ({
 }) => {
   const ds = await readProvisionedDataSource<MyDataSourceOptions, MySecureJsonData>({ fileName: 'datasources.yml' });
 
-  await runCommand('..', 'make', 'out/backend').catch((err) => {
-    console.error(err);
-  });
-  const backend = startCommand('..', './out/backend', '--bind-type', 'tcp', '--bind', 'localhost:6880').on('error', (err) => {
-    console.error(err);
-  });
-  await waitPort('localhost:6880').catch((err) => {
-    console.error(err);
-  });
+  await runCommand('..', 'make', 'out/backend').catch((err) => console.error(err));
+  const backend = startCommand('..', './out/backend', '--bind-type', 'tcp', '--bind', 'localhost:6880').on('error', (err) => console.error(err));
+  await waitPort('localhost:6880').catch((err) => console.error(err));
 
   setTimeout(async () => {
     const configPage = await createDataSourceConfigPage({ type: ds.type });
@@ -80,7 +75,7 @@ test('"Save & test" should be successful when configuration is valid', async ({
     await page.getByRole('textbox', { name: 'Hermes' }).fill(ds.jsonData.hermes ?? '');
     await expect(configPage.saveAndTest()).toBeOK();
     await backend.kill(); // TODO this doesn't work
-  }, 1000);
+  }, 1000); // TODO this is jank
 });
 
 test('"Save & test" should fail when configuration is invalid', async ({
