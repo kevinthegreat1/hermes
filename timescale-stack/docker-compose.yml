@@ -1,4 +1,16 @@
 services:
+  hermes-plugin-installer:
+    image: alpine:latest
+    volumes:
+      - grafana-plugins:/plugins
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl jq bash unzip &&
+        curl -fsSL https://raw.githubusercontent.com/nasa/hermes/main/nasa-hermes-datasource/install.sh \
+          | bash -s -- /plugins
+
   timescaledb:
     image: timescale/timescaledb:latest-pg16
     environment:
@@ -15,12 +27,17 @@ services:
     ports:
       - "3000:3000" 
     environment:
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=nasa-hermes-datasource
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: nasa-hermes-datasource
     depends_on:
-      - timescaledb
+      timescaledb:
+        condition: service_started
+      hermes-plugin-installer:
+        condition: service_completed_successfully
     volumes:
       - grafana-data:/var/lib/grafana
+      - grafana-plugins:/var/lib/grafana/plugins
       - ./provisioning:/etc/grafana/provisioning:ro
 volumes:
   timescale-data:
   grafana-data:
+  grafana-plugins:
