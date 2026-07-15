@@ -12,19 +12,15 @@ Check out [using Grafana with TimescaleDB](db/timescaledb#using-grafana-with-tim
 
 ## Installing the Hermes data source plugin
 
-The Hermes data source plugin is distributed as a release asset on GitHub. Because
-it is **unsigned**, Grafana must be configured to allow it in addition to
-installing the files.
+The Hermes data source plugin is distributed as a release asset on GitHub. If you are using the default [docker compose](../../timescale-stack/docker-compose.yml), the plugin is pre-installed, and no action is needed. Otherwise, you need to install the plugin following the steps below. Because it is **unsigned**, Grafana must be configured to allow it in addition to installing the files.
 
-Pick the method that matches your setup:
+After [allowing the unsigned plugin](#allowing-the-unsigned-plugin), pick the method that matches your setup:
 
-- **[Existing Grafana instance](#existing-grafana-instance)** — run the install script.
-- **[Docker Compose](#docker-compose)** — add an installer service to your stack (recommended).
-- **[Single Docker container](#single-docker-container)** — mount a host directory.
+- **[Install to Docker Compose](#install-to-docker-compose)** — add an installer service to your stack (recommended).
+- **[Install to an existing Grafana instance](#install-to-an-existing-grafana-instance)** — run the install script.
+- **[Install to a single Docker container](#install-to-a-single-docker-container)** — mount a host directory.
 
-All methods require [allowing the unsigned plugin](#allowing-the-unsigned-plugin).
-
-### Allowing the unsigned plugin
+### Allowing the Unsigned Plugin
 
 Grafana will not load the plugin unless it is explicitly allowed. Use whichever
 applies to your setup:
@@ -44,31 +40,11 @@ applies to your setup:
 
 Restart Grafana after changing `grafana.ini`.
 
-### Existing Grafana instance
-
-The install script downloads the latest published release and extracts it into
-your Grafana plugins directory. It requires [`jq`](https://jqlang.github.io/jq/).
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nasa/hermes/main/nasa-hermes-datasource/install.sh | bash
-```
-
-The script auto-detects a plugins directory. To install into a specific directory,
-pass it as an argument (everything after `bash -s --` is passed to the script):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nasa/hermes/main/nasa-hermes-datasource/install.sh \
-  | bash -s -- /var/lib/grafana/plugins
-```
-
-The plugin is installed to `<plugins-dir>/nasa-hermes-datasource/`. Then
-[allow the unsigned plugin](#allowing-the-unsigned-plugin) and restart Grafana.
-
-### Docker Compose
+### Install to Docker Compose
 
 Add a short-lived installer service that runs the install script into a shared
 volume before Grafana starts. This always installs the latest published release,
-with no manual step:
+with no manual step. This is included in the default [`docker-compose.yml`](../../timescale-stack/docker-compose.yml), so no modifications are needed, and the plugin is automatically installed if you are using that docker compose.
 
 ```yaml
 services:
@@ -120,7 +96,27 @@ fresh install of the latest release.
           GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: "nasa-hermes-datasource"
     ```
 
-### Single Docker container
+### Install to an Existing Grafana Instance
+
+The install script downloads the latest published release and extracts it into
+your Grafana plugins directory. It requires [`jq`](https://jqlang.github.io/jq/).
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nasa/hermes/main/nasa-hermes-datasource/install.sh | bash
+```
+
+The script auto-detects a plugins directory. To install into a specific directory,
+pass it as an argument (everything after `bash -s --` is passed to the script):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nasa/hermes/main/nasa-hermes-datasource/install.sh \
+  | bash -s -- /var/lib/grafana/plugins
+```
+
+The plugin is installed to `<plugins-dir>/nasa-hermes-datasource/`. Then
+[allow the unsigned plugin](#allowing-the-unsigned-plugin) and restart Grafana.
+
+### Install to a Single Docker Container
 
 Install the plugin into a host folder, then mount it into the container:
 
