@@ -55,7 +55,7 @@ if [ ! -d "$PLUGINS_DIR" ]; then
 fi
 
 # Download and extract
-TMP_ZIP=$(mktemp /tmp/${PLUGIN_ID}.XXXXXX.zip)
+TMP_ZIP=$(mktemp /tmp/${PLUGIN_ID}.XXXXXX)
 echo "Downloading ${ZIP_URL}..."
 curl -fsSL "$ZIP_URL" -o "$TMP_ZIP"
 
