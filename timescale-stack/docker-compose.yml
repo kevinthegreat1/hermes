@@ -14,6 +14,8 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000" 
+    environment:
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=nasa-hermes-datasource
     depends_on:
       - timescaledb
     volumes:
