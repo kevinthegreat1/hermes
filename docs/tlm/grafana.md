@@ -92,7 +92,7 @@ fresh install of the latest release.
 
     ```yaml
         environment:
-          GF_INSTALL_PLUGINS: "https://github.com/nasa/hermes/releases/download/grafana-v1.0.0/nasa-hermes-datasource-1.0.0.zip;nasa-hermes-datasource"
+          GF_INSTALL_PLUGINS: "https://github.com/nasa/hermes/releases/download/v5.0.0/nasa-hermes-datasource-5.0.0.zip;nasa-hermes-datasource"
           GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: "nasa-hermes-datasource"
     ```
 
