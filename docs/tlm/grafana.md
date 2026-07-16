@@ -12,12 +12,12 @@ Check out [using Grafana with TimescaleDB](db/timescaledb#using-grafana-with-tim
 
 ## Installing the Hermes data source plugin
 
-The Hermes data source plugin is distributed as a release asset on GitHub. If you are using the default [docker compose](https://github.com/nasa/hermes/blob/main/docker-compose.yml), the plugin is pre-installed, and no action is needed. Otherwise, you need to install the plugin following the steps below. Because it is **unsigned**, Grafana must be configured to allow it in addition to installing the files.
+The Hermes data source plugin is distributed as a release asset on GitHub. If you are using the default [docker compose](https://github.com/nasa/hermes/blob/main/docker-compose.yml), the plugin is pre-installed with a pinned version, and no action is needed. Otherwise, you need to install the plugin following the steps below. Because it is **unsigned**, Grafana must be configured to allow it in addition to installing the files.
 
 After [allowing the unsigned plugin](#allowing-the-unsigned-plugin), pick the method that matches your setup:
 
-- **[Install to Docker Compose](#install-to-docker-compose)** — add an installer service to your stack (recommended).
-- **[Install to an existing Grafana instance](#install-to-an-existing-grafana-instance)** — run the install script.
+- **[Install to Docker Compose](#install-to-docker-compose)** — use Grafana's built-in plugin installer with a pinned version (**recommended**).
+- **[Install to an existing Grafana instance](#install-to-an-existing-grafana-instance)** — run the install script to get the latest release.
 - **[Install to a single Docker container](#install-to-a-single-docker-container)** — mount a host directory.
 
 ### Allowing the Unsigned Plugin
@@ -42,59 +42,26 @@ Restart Grafana after changing `grafana.ini`.
 
 ### Install to Docker Compose
 
-Add a short-lived installer service that runs the install script into a shared
-volume before Grafana starts. This always installs the latest published release,
-with no manual step. This is included in the default [`docker-compose.yml`](https://github.com/nasa/hermes/blob/main/docker-compose.yml), so no modifications are needed, and the plugin is automatically installed if you are using that docker compose.
+**This is the recommended approach.** Use Grafana's built-in `GF_INSTALL_PLUGINS` environment variable to install a specific pinned version of the plugin. This is the approach used in the default [`docker-compose.yml`](https://github.com/nasa/hermes/blob/main/docker-compose.yml):
 
 ```yaml
 services:
-  # Runs once, installs the latest published plugin into a shared volume, then exits
-  hermes-plugin-installer:
-    image: alpine:latest
-    volumes:
-      - grafana-plugins:/plugins
-    command:
-      - sh
-      - -c
-      - |
-        apk add --no-cache curl jq bash unzip &&
-        curl -fsSL https://raw.githubusercontent.com/nasa/hermes/main/grafana-datasource-plugin/install.sh \
-          | bash -s -- /plugins
-
   grafana:
     image: grafana/grafana:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
-    depends_on:
-      hermes-plugin-installer:
-        condition: service_completed_successfully
     environment:
+      GF_INSTALL_PLUGINS: "https://github.com/nasa/hermes/releases/download/v5.0.0/nasa-hermes-datasource-5.0.0.zip;nasa-hermes-datasource"
       GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: "nasa-hermes-datasource"
     volumes:
       - grafana-data:/var/lib/grafana
-      - grafana-plugins:/var/lib/grafana/plugins
 
 volumes:
   grafana-data:
-  grafana-plugins:
 ```
 
-The `condition: service_completed_successfully` ensures Grafana only starts after
-the plugin is installed. The plugin persists in the `grafana-plugins` volume across
-restarts; recreating that volume (for example, `docker compose down -v`) triggers a
-fresh install of the latest release.
-
-!!! tip "Pinning a specific version"
-
-    To install a fixed version instead of the latest, drop the installer service and
-    use Grafana's built-in `GF_INSTALL_PLUGINS` with an explicit release URL:
-
-    ```yaml
-        environment:
-          GF_INSTALL_PLUGINS: "https://github.com/nasa/hermes/releases/download/v5.0.0/nasa-hermes-datasource-5.0.0.zip;nasa-hermes-datasource"
-          GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: "nasa-hermes-datasource"
-    ```
+The plugin is downloaded and installed automatically when the container starts. To upgrade to a newer version, update the release URL in `GF_INSTALL_PLUGINS` to point to the desired version from the [releases page](https://github.com/nasa/hermes/releases) and recreate the container.
 
 ### Install to an Existing Grafana Instance
 

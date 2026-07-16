@@ -3,7 +3,6 @@ set -e
 
 PLUGIN_ID="nasa-hermes-datasource"
 REPO="nasa/hermes"
-TAG_PREFIX="grafana-v"
 RELEASE_URL="https://api.github.com/repos/${REPO}/releases"
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -11,20 +10,20 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "Fetching latest ${TAG_PREFIX}* release info..."
+echo "Fetching latest release with Grafana plugin..."
 RELEASE_JSON=$(curl -fsSL "$RELEASE_URL" \
-    | jq -r --arg prefix "$TAG_PREFIX" '[.[]
-        | select(.tag_name | startswith($prefix))
-        | select(.draft == false and .prerelease == false)][0]')
+    | jq -r '[.[]
+        | select(.draft == false and .prerelease == false)
+        | select(.assets[] | .name | contains("nasa-hermes-datasource"))][0]')
 
 if [ -z "$RELEASE_JSON" ] || [ "$RELEASE_JSON" = "null" ]; then
-    echo "Error: Could not find a published ${TAG_PREFIX}* release. Check https://github.com/${REPO}/releases"
+    echo "Error: Could not find a published release with the Grafana plugin. Check https://github.com/${REPO}/releases"
     exit 1
 fi
 
 VERSION=$(echo "$RELEASE_JSON" | jq -r '.tag_name')
 ZIP_URL=$(echo "$RELEASE_JSON" \
-    | jq -r '.assets[] | select(.name | endswith(".zip")) | .browser_download_url' | head -1)
+    | jq -r '.assets[] | select(.name | contains("nasa-hermes-datasource") and (.name | endswith(".zip"))) | .browser_download_url' | head -1)
 
 if [ -z "$ZIP_URL" ] || [ "$ZIP_URL" = "null" ]; then
     echo "Error: Could not find a plugin zip in release ${VERSION}. Check https://github.com/${REPO}/releases"
