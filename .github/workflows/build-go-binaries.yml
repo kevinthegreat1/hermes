@@ -16,7 +16,6 @@ jobs:
   test:
     name: Run Go Tests
     runs-on: ubuntu-latest
-    if: ${{ !startsWith(github.event.release.tag_name, 'grafana-v') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
