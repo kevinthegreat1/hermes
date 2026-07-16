@@ -3,9 +3,9 @@
 name: Grafana Release
 
 on:
-  push:
-    tags:
-      - 'grafana-v*'
+  release:
+    types: [published]
+  workflow_dispatch:
 
 permissions: read-all
 
