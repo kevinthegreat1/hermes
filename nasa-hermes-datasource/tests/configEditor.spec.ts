@@ -32,7 +32,7 @@ function waitPort(target: string, retries = 10, timeout = 500) {
         done = true;
         socket.destroy();
         if (sucess) {
-          resolve();
+          setTimeout(resolve, 1000);
         } else if (retries-- <= 0) {
           reject(new Error(`Port ${target} did not open in time`));
         } else {
@@ -66,16 +66,15 @@ test('"Save & test" should be successful when configuration is valid', async ({
   const backend = startCommand('..', './out/backend', '--bind-type', 'tcp', '--bind', 'localhost:6880').on('error', (err) => console.error(err));
   await waitPort('localhost:6880').catch((err) => console.error(err));
 
-  setTimeout(async () => {
-    const configPage = await createDataSourceConfigPage({ type: ds.type });
-    await page.getByRole('textbox', { name: 'Host' }).fill(ds.jsonData.host ?? '');
-    await page.getByRole('textbox', { name: 'User' }).fill(ds.jsonData.user ?? '');
-    await page.locator('#config-editor-password').fill(ds.secureJsonData?.password ?? '');
-    await page.getByRole('textbox', { name: 'Database' }).fill(ds.jsonData.database ?? '');
-    await page.getByRole('textbox', { name: 'Hermes' }).fill(ds.jsonData.hermes ?? '');
-    await expect(configPage.saveAndTest()).toBeOK();
-    await backend.kill(); // TODO this doesn't work
-  }, 1000); // TODO this is jank
+  const configPage = await createDataSourceConfigPage({ type: ds.type });
+  await page.getByRole('textbox', { name: 'Host' }).fill(ds.jsonData.host ?? '');
+  await page.getByRole('textbox', { name: 'User' }).fill(ds.jsonData.user ?? '');
+  await page.locator('#config-editor-password').fill(ds.secureJsonData?.password ?? '');
+  await page.getByRole('textbox', { name: 'Database' }).fill(ds.jsonData.database ?? '');
+  await page.getByRole('textbox', { name: 'Hermes' }).fill(ds.jsonData.hermes ?? '');
+  await expect(configPage.saveAndTest()).not.toBeOK();
+  await expect(configPage).toHaveAlert('error', { hasText: 'Status of connection to Hermes is unknown, no dictionaries are loaded or registered yet.' });
+  backend.kill(); // TODO this doesn't work
 });
 
 test('"Save & test" should fail when configuration is invalid', async ({
