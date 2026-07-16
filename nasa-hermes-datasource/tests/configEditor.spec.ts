@@ -21,7 +21,6 @@ function waitPort(target: string, retries = 10, timeout = 500) {
   const [host, portStr] = target.split(':');
   const port = Number(portStr);
 
-  // TODO I don't think this works properly
   return new Promise<void>((resolve, reject) => {
     const tryPort = () => {
       const socket = createConnection({ host, port }).setTimeout(timeout);
@@ -32,7 +31,7 @@ function waitPort(target: string, retries = 10, timeout = 500) {
         done = true;
         socket.destroy();
         if (sucess) {
-          setTimeout(resolve, 1000);
+          resolve();
         } else if (retries-- <= 0) {
           reject(new Error(`Port ${target} did not open in time`));
         } else {
@@ -55,6 +54,7 @@ test('smoke: should render config editor', async ({ createDataSourceConfigPage, 
   await expect(page.getByRole('textbox', { name: 'Database' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Hermes' })).toBeVisible();
 });
+
 test('"Save & test" should be successful when configuration is valid', async ({
   createDataSourceConfigPage,
   readProvisionedDataSource,
@@ -74,7 +74,7 @@ test('"Save & test" should be successful when configuration is valid', async ({
   await page.getByRole('textbox', { name: 'Hermes' }).fill(ds.jsonData.hermes ?? '');
   await expect(configPage.saveAndTest()).not.toBeOK();
   await expect(configPage).toHaveAlert('error', { hasText: 'Status of connection to Hermes is unknown, no dictionaries are loaded or registered yet.' });
-  backend.kill(); // TODO this doesn't work
+  backend.kill();
 });
 
 test('"Save & test" should fail when configuration is invalid', async ({
