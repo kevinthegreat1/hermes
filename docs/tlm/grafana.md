@@ -8,7 +8,10 @@ Check out [using Grafana with TimescaleDB](db/timescaledb#using-grafana-with-tim
 
 ## Installing the Hermes data source plugin
 
-The Hermes data source plugin is distributed as a release asset on GitHub. If you are using the default [docker compose](https://github.com/nasa/hermes/blob/main/docker-compose.yml), the plugin is pre-installed with a pinned version, and no action is needed. Otherwise, you need to install the plugin following the steps below. Because it is **unsigned**, Grafana must be configured to allow it in addition to installing the files.
+The Hermes data source plugin is distributed as a release asset on GitHub.
+
+- If you are using the default [docker compose](https://github.com/nasa/hermes/blob/main/docker-compose.yml), the plugin is pre-installed with a pinned version, and you can skip directly to [verifying the installation](#verifying-the-installation).
+- Otherwise, you need to install the plugin following the steps below. Also, because it is **unsigned**, Grafana must be configured to allow it in addition to installing the files.
 
 After [allowing the unsigned plugin](#allowing-the-unsigned-plugin), pick the method that matches your setup:
 
@@ -40,7 +43,7 @@ Restart Grafana after changing `grafana.ini`.
 
 **This is the recommended approach.** Use Grafana's built-in `GF_INSTALL_PLUGINS` environment variable to install a specific pinned version of the plugin. This is the approach used in the default [`docker-compose.yml`](https://github.com/nasa/hermes/blob/main/docker-compose.yml):
 
-```yaml
+```diff
 services:
   grafana:
     image: grafana/grafana:latest
@@ -48,8 +51,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      GF_INSTALL_PLUGINS: "https://github.com/nasa/hermes/releases/download/v5.0.0/nasa-hermes-datasource-5.0.0.zip;nasa-hermes-datasource"
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: "nasa-hermes-datasource"
++     GF_INSTALL_PLUGINS: "https://github.com/nasa/hermes/releases/download/v5.0.0/nasa-hermes-datasource-5.0.0.zip;nasa-hermes-datasource"
++     GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: "nasa-hermes-datasource"
     volumes:
       - grafana-data:/var/lib/grafana
 
