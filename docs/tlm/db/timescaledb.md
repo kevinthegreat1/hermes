@@ -4,11 +4,14 @@ icon: brands/timescaledb
 
 # TimescaleDB
 
-## Using Grafana with TimescaleDB
+## Using Grafana with TimescaleDB (Hermes Docker Compose)
 
-Hermes offers a docker compose with TimescaleDB and Grafana, and a Grafana datasource plugin for use with TimescaleDB. The docker compose can be found at `timescale-stack/docker-compose.yml`. To get started with development, start the database locally with `docker compose --project-directory ./timescale-stack up -d`. Next, we can connect the backend to the database with a profile from the Hermes VS Code extension.
+Hermes offers a docker compose with TimescaleDB and Grafana, and a Grafana datasource plugin for use with TimescaleDB. The docker compose can be found at `docker-compose.yml`. To get started with development, start the database locally with `docker compose up -d`. Next, choose one out of these two options:
 
-### TimescaleDB Profile
+- Connect the backend to the database with a TimescaleDB profile from the Hermes VS Code extension (if you are using the Hermes backend).
+- Push data to the database through some other means. The database is available at `localhost:5432`.
+
+### TimescaleDB Profile (Hermes Backend Only)
 
 ![Hermes extension Profile tab with an TimescaleDB Profile](../../assets/profile-timescaledb.png){ width=200 align=right }
 
@@ -24,7 +27,7 @@ Once connected, we can visualize the data. Navigate to the `Dashboards` page and
 
 ![Grafana Dashboards page configuring a new panel using the Hermes data source](../../assets/grafana-plugin-query.png)
 
-## Manual Local Connection
+## Custom TimescaleDB Instance (Not Using Hermes Docker Compose)
 
 !!! note
     This step is not needed if connecting via the profile shown above.
